@@ -64,6 +64,8 @@ select.sel{padding:10px 10px;border-radius:12px;border:1px solid var(--line);bac
 .seg{display:flex;background:var(--chip);border-radius:12px;padding:3px;gap:3px}
 .seg button{flex:1;border:0;background:none;border-radius:9px;padding:8px 4px;font-size:14px;color:var(--muted)}
 .seg button.on{background:var(--surface);color:var(--ink);font-weight:650;box-shadow:var(--shadow)}
+.floor-h{display:flex;justify-content:space-between;align-items:baseline;margin:20px 2px 10px;font-size:20px;font-weight:700;color:var(--brand)}
+.floor-h:first-child{margin-top:6px}.floor-h small{font-size:13px;font-weight:400;color:var(--muted)}
 .group-h{display:flex;justify-content:space-between;align-items:baseline;margin:18px 2px 8px;font-weight:650}
 .group-h small{color:var(--muted);font-weight:400;font-size:13px}
 .card{display:flex;gap:12px;background:var(--surface);border-radius:var(--r);padding:10px;box-shadow:var(--shadow);margin-bottom:10px;border:1px solid var(--line);width:100%;text-align:left}
@@ -141,6 +143,7 @@ input.in:focus,textarea.in:focus,select.in:focus,.search:focus{outline:2px solid
 .hint{font-size:13px;color:var(--muted);margin:8px 0 0}
 .listedit .row{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
 .listedit .row span{flex:1}
+.listedit .row button.mv{font-size:12px;color:var(--ink);background:var(--chip);border-radius:20px;padding:4px 10px;white-space:nowrap}
 .listedit .row button{border:0;background:none;color:var(--muted);font-size:18px;padding:4px 8px}
 .busy{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:130;display:grid;place-items:center;color:#fff;font-size:17px}
 </style>
@@ -170,6 +173,7 @@ input.in:focus,textarea.in:focus,select.in:focus,.search:focus{outline:2px solid
    CONFIGURAZIONE
    ========================================================= */
 const DEFAULT_ROOMS = ['Soggiorno','Sala da pranzo','Cucina','Camera matrimoniale','Camera singola','Cameretta','Studio','Bagno','Ingresso','Corridoio','Terrazzo / Esterno','Cantina / Deposito','Da decidere'];
+const DEFAULT_FLOORS = ['Piano terra','Piano 1','Piano 2'];
 const DEFAULT_CATS = ['Armadio','Cassettiera / Comò','Comodino','Letto','Divano','Poltrona','Sedia','Tavolo','Tavolino','Scrivania','Libreria','Credenza / Madia','Mobile TV','Vetrina','Specchio','Lampada','Tappeto','Quadro','Altro'];
 
 // Misure aggiuntive predefinite (u = unità)
@@ -370,7 +374,7 @@ function captionLines(it){
   const extra = [...Object.entries(it.extra||{}).filter(([k,v]) => EXTRA[k] && v!=null).map(([k,v]) => `${EXTRA[k].l} ${fmt(v)}${EXTRA[k].u==='n'?'':' '+EXTRA[k].u}`),
     ...(it.custom||[]).filter(c => c.label && c.value!=null).map(c => `${c.label} ${fmt(c.value)} cm`)];
   const lines = [`${it.code}  ${displayName(it)}${it.qty>1?`  ×${it.qty}`:''}`,
-    [m ? m+' cm' : (it.extra?.diametro ? `Ø ${fmt(it.extra.diametro)} cm` : 'misure da inserire'), `→ ${it.roomTarget||'stanza da decidere'}`].join('   ')];
+    [m ? m+' cm' : (it.extra?.diametro ? `Ø ${fmt(it.extra.diametro)} cm` : 'misure da inserire'), `→ ${it.floor||it.roomTarget ? placeLabel(it) : 'stanza da decidere'}`].join('   ')];
   for (let i = 0; i < extra.length; i += 3) lines.push(extra.slice(i, i+3).join(' · '));
   const det = [it.category, it.material, it.finish, it.condition].filter(Boolean).join(' · ');
   if (det) lines.push(det);
@@ -406,8 +410,8 @@ function forgetThumb(id){ const u = thumbUrls.get(id); if (u) { URL.revokeObject
    ========================================================= */
 const S = {
   items: [],
-  settings: {project:'', rooms:[...DEFAULT_ROOMS], categories:[...DEFAULT_CATS]},
-  filter: {q:'', room:'', cat:''},
+  settings: {project:'', floors:[...DEFAULT_FLOORS], rooms:[...DEFAULT_ROOMS], roomFloor:{}, categories:[...DEFAULT_CATS]},
+  filter: {q:'', place:'', cat:''},
   group: 'room',
 };
 let F = null;   // scheda in modifica
@@ -416,6 +420,7 @@ let F_orig = null;
 async function loadAll(){
   S.items = await idb.all('items');
   const st = await idb.get('kv', 'settings'); if (st) Object.assign(S.settings, st);
+  S.settings.floors ||= [...DEFAULT_FLOORS]; S.settings.roomFloor ||= {};
   const ui = await idb.get('kv', 'ui'); if (ui) { S.group = ui.group || 'room'; }
 }
 const saveSettings = () => idb.put('kv', S.settings, 'settings');
@@ -423,10 +428,30 @@ const saveUi = () => idb.put('kv', {group:S.group}, 'ui');
 
 function newItem(){
   return { id:uid(), code:'', isNew:true, createdAt:Date.now(), updatedAt:Date.now(),
-    name:'', category:'', roomTarget:'', roomCurrent:'', qty:1,
+    name:'', category:'', floor:'', roomTarget:'', roomCurrent:'', qty:1,
     dims:{larghezza:null, profondita:null, altezza:null}, extra:{}, shownExtras:[], custom:[],
     material:'', finish:'', condition:'', notes:'', photoIds:[], _added:[], _removed:[] };
 }
+/* --- piani e stanze --- */
+// numero del piano: "Piano terra" → 0, "Piano 2" → 2, "Interrato -1" → -1
+function floorNum(f){ if (/terra/i.test(f)) return 0; const m = String(f||'').match(/-?\d+/); return m ? +m[0] : null; }
+// stanze proposte per un piano: quelle di quel piano + quelle valide per tutti i piani
+function roomsForFloor(fl){ return S.settings.rooms.filter(r => !S.settings.roomFloor[r] || S.settings.roomFloor[r] === fl); }
+function placeLabel(it){ return [it.floor, it.roomTarget].filter(Boolean).join(' · ') || 'Da assegnare'; }
+function floorRank(f){ if (!f) return 9990; const i = S.settings.floors.indexOf(f); return i < 0 ? 9000 : i; }
+function placeRank(it){ const ri = S.settings.rooms.indexOf(it.roomTarget); return floorRank(it.floor)*10000 + (it.roomTarget ? (ri < 0 ? 9000 : ri) : 9999); }
+// raggruppa in ordine: [[etichetta, [mobili]], …]
+function groupItems(items, keyFn, rankFn){
+  const m = new Map();
+  items.forEach(it => { const k = keyFn(it); if (!m.has(k)) m.set(k, {rank:rankFn(it), items:[]}); m.get(k).items.push(it); });
+  return [...m.entries()].sort((a,b) => a[1].rank - b[1].rank || cmp(a[0], b[0])).map(([k,v]) => [k, v.items]);
+}
+const GROUPS = {
+  floor: {key: it => it.floor || 'Piano non indicato', rank: it => floorRank(it.floor)},
+  room:  {key: placeLabel, rank: placeRank},
+  cat:   {key: it => it.category || 'Senza categoria', rank: it => { const i = S.settings.categories.indexOf(it.category); return i < 0 ? 999 : i; }},
+  none:  {key: () => '', rank: () => 0},
+};
 function nextCode(){
   const max = S.items.reduce((m,it) => Math.max(m, parseInt(String(it.code).replace(/\D/g,''))||0), 0);
   return 'M' + String(max+1).padStart(3,'0');
@@ -485,16 +510,28 @@ function animate(cls){
 function filtered(){
   const q = S.filter.q.toLowerCase().trim();
   return S.items.filter(it =>
-    (!S.filter.room || (it.roomTarget||'Da assegnare') === S.filter.room) &&
+    (!S.filter.place || (S.filter.place.startsWith('F:') ? (it.floor||'') === S.filter.place.slice(2) : placeLabel(it) === S.filter.place.slice(2))) &&
     (!S.filter.cat || (it.category||'Senza categoria') === S.filter.cat) &&
-    (!q || [it.code, it.name, it.category, it.roomTarget, it.roomCurrent, it.material, it.finish, it.notes].join(' ').toLowerCase().includes(q))
+    (!q || [it.code, it.name, it.category, it.floor, it.roomTarget, it.roomCurrent, it.material, it.finish, it.notes].join(' ').toLowerCase().includes(q))
   ).sort((a,b) => cmp(b.code, a.code));
 }
-function groupKey(it){ return S.group === 'room' ? (it.roomTarget || 'Da assegnare') : S.group === 'cat' ? (it.category || 'Senza categoria') : ''; }
+// opzioni del filtro luogo: per ogni piano "tutto il piano" + le sue stanze usate
+function placeOptions(){
+  const sel = S.filter.place;
+  const opt = (v, l) => `<option value="${esc(v)}" ${v===sel?'selected':''}>${esc(l)}</option>`;
+  const floors = [...new Set([...S.settings.floors, ...S.items.map(i=>i.floor).filter(Boolean)])];
+  let h = '';
+  floors.forEach(f => {
+    const places = groupItems(S.items.filter(i => i.floor === f && i.roomTarget), placeLabel, placeRank).map(([k]) => k);
+    h += `<optgroup label="${esc(f)}">${opt('F:'+f, `${f} – tutto`)}${places.map(p => opt('R:'+p, p.split(' · ').slice(1).join(' · '))).join('')}</optgroup>`;
+  });
+  const rest = groupItems(S.items.filter(i => !i.floor), placeLabel, placeRank).map(([k]) => k);
+  if (rest.length) h += `<optgroup label="Senza piano">${rest.map(p => opt('R:'+p, p)).join('')}</optgroup>`;
+  return h;
+}
 
 async function renderList(){
   setChrome({title:`Inventario Mobili${S.settings.project?`<div class="sub">${esc(S.settings.project)}</div>`:''}`, fab:true, tab:'navList'});
-  const rooms = [...new Set([...S.settings.rooms, ...S.items.map(i=>i.roomTarget||'Da assegnare')])];
   const cats = [...new Set([...S.settings.categories, ...S.items.map(i=>i.category||'Senza categoria')])];
   if (!S.items.length) {
     app.innerHTML = `<div class="empty"><div class="big">🛋️</div><h2>Nessun mobile ancora</h2>
@@ -504,13 +541,13 @@ async function renderList(){
   app.innerHTML = `
     <div class="toolbar"><input class="search" id="q" type="search" placeholder="🔍 Cerca (nome, codice, materiale…)" value="${esc(S.filter.q)}"></div>
     <div class="filters">
-      <select class="sel" id="fRoom"><option value="">Tutte le stanze</option>${rooms.map(r=>`<option ${r===S.filter.room?'selected':''}>${esc(r)}</option>`).join('')}</select>
+      <select class="sel" id="fRoom"><option value="">Tutti i piani e stanze</option>${placeOptions()}</select>
       <select class="sel" id="fCat"><option value="">Tutte le categorie</option>${cats.map(r=>`<option ${r===S.filter.cat?'selected':''}>${esc(r)}</option>`).join('')}</select>
     </div>
-    <div class="seg" role="tablist" aria-label="Raggruppa">${[['room','Per stanza'],['cat','Per categoria'],['none','Tutti']].map(([v,l])=>`<button data-grp="${v}" class="${S.group===v?'on':''}">${l}</button>`).join('')}</div>
+    <div class="seg" role="tablist" aria-label="Raggruppa">${[['floor','Piano'],['room','Stanza'],['cat','Categoria'],['none','Tutti']].map(([v,l])=>`<button data-grp="${v}" class="${S.group===v?'on':''}">${l}</button>`).join('')}</div>
     <div id="list"></div>`;
   $('#q').oninput = e => { S.filter.q = e.target.value; drawList(); };
-  $('#fRoom').onchange = e => { S.filter.room = e.target.value; drawList(); };
+  $('#fRoom').onchange = e => { S.filter.place = e.target.value; drawList(); };
   $('#fCat').onchange = e => { S.filter.cat = e.target.value; drawList(); };
   app.querySelectorAll('[data-grp]').forEach(b => b.onclick = () => { S.group = b.dataset.grp; saveUi();
     app.querySelectorAll('[data-grp]').forEach(x => x.classList.toggle('on', x === b)); drawList(); });
@@ -520,12 +557,8 @@ function drawList(){
   const list = $('#list'); if (!list) return;
   const items = filtered();
   if (!items.length) { list.innerHTML = `<div class="empty">Nessun risultato.</div>`; return; }
-  const groups = new Map();
-  items.forEach(it => { const k = groupKey(it); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(it); });
-  const order = S.group === 'room' ? S.settings.rooms : S.group === 'cat' ? S.settings.categories : [];
-  const keys = [...groups.keys()].sort((a,b) => { const ia = order.indexOf(a), ib = order.indexOf(b); return (ia<0?999:ia)-(ib<0?999:ib) || cmp(a, b); });
-  list.innerHTML = keys.map(k => {
-    const g = groups.get(k);
+  const G = GROUPS[S.group] || GROUPS.room;
+  list.innerHTML = groupItems(items, G.key, G.rank).map(([k, g]) => {
     const pcs = g.reduce((s,i)=>s+(i.qty||1),0);
     const area = g.reduce((s,i)=>s+(footprint(i)||0)*(i.qty||1),0);
     return `${S.group!=='none'?`<div class="group-h"><span>${esc(k)}</span><small>${pcs} pz${area?` · ${fmt(area,2)} m²`:''}</small></div>`:''}
@@ -534,7 +567,7 @@ function drawList(){
         <div class="info">
           <div class="t"><span class="code">${esc(it.code)}</span>${esc(displayName(it))}${it.qty>1?` <span class="badge">×${it.qty}</span>`:''}</div>
           <div class="m">${dimsText(it)}</div>
-          <div class="meta">${S.group!=='cat'&&it.category?`<span class="badge">${esc(it.category)}</span>`:''}${S.group!=='room'?`<span class="badge">→ ${esc(it.roomTarget||'Da assegnare')}</span>`:''}${esc([it.material,it.finish].filter(Boolean).join(' · '))}</div>
+          <div class="meta">${S.group!=='cat'&&it.category?`<span class="badge">${esc(it.category)}</span>`:''}${S.group!=='room'?`<span class="badge">→ ${esc(S.group==='floor' ? (it.roomTarget||'stanza ?') : placeLabel(it))}</span>`:''}${esc([it.material,it.finish].filter(Boolean).join(' · '))}</div>
         </div></button>`).join('')}`;
   }).join('');
   list.querySelectorAll('.card').forEach(c => c.onclick = () => openEditor(c.dataset.id));
@@ -545,13 +578,13 @@ function drawList(){
    STANZE (riepilogo)
    ========================================================= */
 function renderRooms(){
-  setChrome({title:'Riepilogo per stanza', fab:true, tab:'navRooms'});
-  const by = new Map();
-  S.items.forEach(it => { const k = it.roomTarget || 'Da assegnare'; if (!by.has(k)) by.set(k, []); by.get(k).push(it); });
-  const keys = [...by.keys()].sort((a,b)=>{const o=S.settings.rooms; const ia=o.indexOf(a), ib=o.indexOf(b); return (ia<0?999:ia)-(ib<0?999:ib);});
-  if (!keys.length) { app.innerHTML = `<div class="empty"><div class="big">🏠</div>Aggiungi qualche mobile per vedere il riepilogo per stanza.</div>`; return; }
-  app.innerHTML = keys.map(k => {
-    const g = by.get(k);
+  setChrome({title:'Riepilogo per piano e stanza', fab:true, tab:'navRooms'});
+  if (!S.items.length) { app.innerHTML = `<div class="empty"><div class="big">🏠</div>Aggiungi qualche mobile per vedere il riepilogo per piano e stanza.</div>`; return; }
+  const tot = g => ({pcs:g.reduce((s,i)=>s+(i.qty||1),0), area:g.reduce((s,i)=>s+(footprint(i)||0)*(i.qty||1),0)});
+  app.innerHTML = groupItems(S.items, GROUPS.floor.key, GROUPS.floor.rank).map(([fl, fg]) => {
+    const t = tot(fg);
+    return `<div class="floor-h"><span>${esc(fl)}</span><small>${t.pcs} pz · ${fmt(t.area,2)} m²</small></div>` +
+      groupItems(fg, it => it.roomTarget || 'Stanza da decidere', placeRank).map(([k, g]) => {
     const pcs = g.reduce((s,i)=>s+(i.qty||1),0);
     const area = g.reduce((s,i)=>s+(footprint(i)||0)*(i.qty||1),0);
     const vol = g.reduce((s,i)=>s+(volume(i)||0)*(i.qty||1),0);
@@ -561,9 +594,10 @@ function renderRooms(){
       <div class="stat"><span>Ingombro a pavimento</span><span>${fmt(area,2)} m²</span></div>
       <div class="stat"><span>Volume</span><span>${fmt(vol,2)} m³</span></div>
       <div class="stat"><span>Composizione</span><span style="text-align:right">${Object.entries(cats).map(([c,n])=>`${esc(c)} ${n}`).join(', ')}</span></div>
-      <button class="btn block" style="margin-top:10px" data-room="${esc(k)}">Vedi mobili</button></div>`;
+      <button class="btn block" style="margin-top:10px" data-place="${esc('R:'+placeLabel(g[0]))}">Vedi mobili</button></div>`;
   }).join('');
-  app.querySelectorAll('[data-room]').forEach(b => b.onclick = () => { S.filter = {q:'', room:b.dataset.room, cat:''}; go('#/'); });
+  }).join('');
+  app.querySelectorAll('[data-place]').forEach(b => b.onclick = () => { S.filter = {q:'', place:b.dataset.place, cat:''}; S.group = 'room'; go('#/'); });
 }
 
 /* =========================================================
@@ -579,7 +613,8 @@ async function openEditor(id){
 }
 function startNew(openCamera){
   F = newItem(); F_orig = null;
-  if (S.lastRoom) F.roomTarget = S.lastRoom;
+  if (S.lastFloor) F.floor = S.lastFloor;
+  if (S.lastRoom && roomsForFloor(F.floor).includes(S.lastRoom)) F.roomTarget = S.lastRoom;
   if (openCamera) $('#camInput').click(); // deve avvenire subito dopo il tocco
   idb.put('kv', F, 'draft');
   go('#/scheda');
@@ -593,6 +628,8 @@ function chipsHtml(list, value, attr){
 function renderEditor(){
   setChrome({title: F.isNew ? 'Nuovo mobile' : `Scheda ${esc(F.code)}`, back:true, nav:false});
   const cats = S.settings.categories, rooms = S.settings.rooms;
+  // la stanza scelta resta visibile anche se appartiene a un altro piano (dati vecchi)
+  const roomChoices = () => { const r = roomsForFloor(F.floor); return F.roomTarget && !r.includes(F.roomTarget) ? [...r, F.roomTarget] : r; };
   app.innerHTML = `
   <div class="sec">
     <h2>Foto</h2>
@@ -637,8 +674,11 @@ function renderEditor(){
   </div>
 
   <div class="sec">
-    <h2>Stanza di destinazione</h2>
-    <div id="roomChips">${chipsHtml(rooms, F.roomTarget, 'room')}</div>
+    <h2>Destinazione</h2>
+    <label class="f">Piano</label>
+    <div id="floorChips">${chipsHtml(S.settings.floors, F.floor, 'floor')}</div>
+    <label class="f">Stanza</label>
+    <div id="roomChips">${chipsHtml(roomChoices(), F.roomTarget, 'room')}</div>
     <label class="f" for="roomCur">Dove si trova ora (provenienza)</label>
     <input class="in" id="roomCur" list="roomList" placeholder="es. Casa vecchia – salotto" value="${esc(F.roomCurrent)}">
     <datalist id="roomList">${rooms.map(r=>`<option value="${esc(r)}">`).join('')}</datalist>
@@ -681,17 +721,29 @@ function renderEditor(){
   $('#qMinus').onclick = () => setQty(F.qty-1);
   $('#qPlus').onclick = () => setQty(F.qty+1);
   bindChips('cat', v => { setCategory(v); });
+  const drawRooms = () => { $('#roomChips').innerHTML = chipsHtml(roomChoices(), F.roomTarget, 'room'); bindRooms(); };
   const bindRooms = () => {
-    const box = $('#roomChips .chips');
-    box.insertAdjacentHTML('beforeend', '<button type="button" class="chip" id="newRoom">＋ Nuova</button>');
+    $('#roomChips .chips').insertAdjacentHTML('beforeend', '<button type="button" class="chip" id="newRoom">＋ Nuova</button>');
     bindChips('room', v => { F.roomTarget = v; });
     $('#newRoom').onclick = async () => {
-      const added = await addRoomsDialog(); if (!added.length) return;
-      F.roomTarget = added[0]; saveDraft();
-      $('#roomChips').innerHTML = chipsHtml(S.settings.rooms, F.roomTarget, 'room'); bindRooms();
+      const added = await addRoomsDialog(F.floor); if (!added.length) return;
+      F.roomTarget = added[0]; saveDraft(); drawRooms();
     };
   };
-  bindRooms();
+  const bindFloors = () => {
+    $('#floorChips .chips').insertAdjacentHTML('beforeend', '<button type="button" class="chip" id="newFloor">＋ Piano</button>');
+    bindChips('floor', v => {
+      F.floor = v;
+      if (F.roomTarget && !roomsForFloor(v).includes(F.roomTarget)) F.roomTarget = ''; // stanza di un altro piano
+      drawRooms();
+    });
+    $('#newFloor').onclick = async () => {
+      const f = await addFloorDialog(); if (!f) return;
+      F.floor = f; if (F.roomTarget && !roomsForFloor(f).includes(F.roomTarget)) F.roomTarget = '';
+      saveDraft(); $('#floorChips').innerHTML = chipsHtml(S.settings.floors, F.floor, 'floor'); bindFloors(); drawRooms();
+    };
+  };
+  bindFloors(); bindRooms();
   bindChips('cond', v => { F.condition = v; });
   $('#takePh').onclick = () => $('#camInput').click();
   $('#galPh').onclick = () => $('#galInput').click();
@@ -828,7 +880,7 @@ function isDirty(){
   if (F.isNew) return F.photoIds.length || F.name || F.category || Object.values(F.dims).some(v=>v!=null) || F.notes;
   const {_added, _removed, isNew, ...rest} = F;
   const o = JSON.parse(F_orig||'{}');
-  return _added.length || _removed.length || ['name','category','roomTarget','roomCurrent','qty','material','finish','condition','notes'].some(k => (rest[k]??'') !== (o[k]??'')) ||
+  return _added.length || _removed.length || ['name','category','floor','roomTarget','roomCurrent','qty','material','finish','condition','notes'].some(k => (rest[k]??'') !== (o[k]??'')) ||
     JSON.stringify(rest.dims) !== JSON.stringify(o.dims) || JSON.stringify(rest.extra) !== JSON.stringify(o.extra) || JSON.stringify(rest.custom) !== JSON.stringify(o.custom);
 }
 async function discardEdit(){
@@ -859,7 +911,7 @@ async function commit(){
   await idb.put('items', clean);
   const i = S.items.findIndex(x => x.id === clean.id);
   if (i >= 0) S.items[i] = clean; else S.items.push(clean);
-  if (clean.roomTarget) S.lastRoom = clean.roomTarget;
+  S.lastFloor = clean.floor; S.lastRoom = clean.roomTarget;
   F = null; F_orig = null; await clearDraft();
   navigator.storage?.persist?.();
   return clean;
@@ -871,7 +923,7 @@ async function saveItem(andNext){
     // la fotocamera va aperta subito, nello stesso tocco (requisito del browser);
     // la foto in arrivo aspetta la fine del salvataggio (vedi onPhotos)
     $('#camInput').click();
-    const next = newItem(); next.roomTarget = F.roomTarget;
+    const next = newItem(); next.floor = F.floor; next.roomTarget = F.roomTarget;
     S.saving = commit(); const saved = await S.saving; S.saving = null;
     F = next; await idb.put('kv', F, 'draft');
     toast(`Salvato ${saved.code} ✔ — ora il prossimo`); renderEditor(); return;
@@ -894,42 +946,63 @@ async function deleteItem(){
 /* =========================================================
    AGGIUNTA STANZE (anche più stanze uguali: "Camera" × 8 → Camera 1…8)
    ========================================================= */
-function numberedRooms(base, qty){
+function numberedRooms(base, qty, floor='', hotel=false){
   const rooms = S.settings.rooms;
   const re = new RegExp('^' + base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ' (\\d+)$', 'i');
+  const n = floorNum(floor);
+  if (hotel && floor && n != null) { // numerazione per piano: Piano 1 → 101, 102…  Piano 2 → 201…  Piano terra → 1, 2…
+    const lo = Math.abs(n) * 100, sign = n < 0 ? '-' : '';
+    const used = rooms.map(r => r.match(re)).filter(Boolean).map(x => +x[1]).filter(v => v > lo && v < lo + 100);
+    const start = (used.length ? Math.max(...used) : lo) + 1;
+    return Array.from({length: qty}, (_, i) => `${base} ${sign}${start + i}`).filter(r => !rooms.includes(r));
+  }
   const max = rooms.reduce((m, r) => { const x = r.match(re); return x ? Math.max(m, +x[1]) : m; }, 0);
   // una sola stanza: nome semplice, a meno che esistano già "Camera 1, 2…" → continua la numerazione
   if (qty <= 1 && !max) return rooms.includes(base) ? [] : [base];
   return Array.from({length: qty}, (_, i) => `${base} ${max + i + 1}`);
 }
-async function addRoomsDialog(){
-  let name, qtyEl;
-  const ok = await modal({title:'Nuova stanza',
-    html:`<input class="in" id="rName" placeholder="es. Camera, Bagno, Ufficio" autocomplete="off">
+async function addRoomsDialog(defFloor=''){
+  let name, qtyEl, flEl, hotEl;
+  const ok = await modal({title:'Nuove stanze',
+    html:`<input class="in" id="rName" placeholder="es. Stanza, Camera, Bagno, Ufficio" autocomplete="off">
+      <label class="f">Piano</label>
+      <select class="in" id="rFloor"><option value="">Tutti i piani (es. Bagno, Corridoio)</option>${S.settings.floors.map(f=>`<option ${f===defFloor?'selected':''}>${esc(f)}</option>`).join('')}</select>
       <label class="f">Quante stanze di questo tipo?</label>
-      <div style="display:flex;align-items:center;gap:12px"><div class="stepper"><button type="button" id="rMinus">−</button><input id="rQty" inputmode="numeric" value="1"><button type="button" id="rPlus">+</button></div>
-      <span class="hint" id="rPrev" style="margin:0"></span></div>`,
+      <div class="stepper"><button type="button" id="rMinus">−</button><input id="rQty" inputmode="numeric" value="1"><button type="button" id="rPlus">+</button></div>
+      <label class="f" id="rHotelL" style="display:flex;gap:10px;align-items:center;color:var(--ink);font-size:15px"><input type="checkbox" id="rHotel" style="width:22px;height:22px" checked> <span id="rHotelT">Numera per piano (101, 102…)</span></label>
+      <p class="hint" id="rPrev" style="font-weight:600;color:var(--brand)"></p>`,
     buttons:[{label:'Aggiungi', value:true, cls:'pri'},{label:'Annulla', value:false}],
     onMount: md => {
-      name = md.querySelector('#rName'); qtyEl = md.querySelector('#rQty');
-      const prev = () => { const q = Math.max(1, Math.min(50, parseInt(qtyEl.value)||1)); const b = name.value.trim();
-        const list = b ? numberedRooms(b, q) : [];
-        md.querySelector('#rPrev').textContent = q > 1 && list.length ? `→ ${list[0]} … ${list[list.length-1]}` : ''; };
+      name = md.querySelector('#rName'); qtyEl = md.querySelector('#rQty'); flEl = md.querySelector('#rFloor'); hotEl = md.querySelector('#rHotel');
+      const prev = () => {
+        const q = Math.max(1, Math.min(50, parseInt(qtyEl.value)||1)), b = name.value.trim(), n = floorNum(flEl.value);
+        md.querySelector('#rHotelL').style.display = flEl.value && n != null ? 'flex' : 'none';
+        md.querySelector('#rHotelT').textContent = n ? `Numera per piano (${Math.abs(n)}01, ${Math.abs(n)}02…)` : 'Numera (1, 2, 3…)';
+        const list = b ? numberedRooms(b, q, flEl.value, hotEl.checked) : [];
+        md.querySelector('#rPrev').textContent = !list.length ? '' : list.length > 1 ? `→ ${list[0]} … ${list[list.length-1]}` : `→ ${list[0]}`;
+      };
       md.querySelector('#rMinus').onclick = () => { qtyEl.value = Math.max(1, (parseInt(qtyEl.value)||1) - 1); prev(); };
       md.querySelector('#rPlus').onclick = () => { qtyEl.value = Math.min(50, (parseInt(qtyEl.value)||1) + 1); prev(); };
-      name.oninput = qtyEl.oninput = prev;
+      name.oninput = qtyEl.oninput = flEl.onchange = hotEl.onchange = prev; prev();
       setTimeout(() => name.focus(), 50);
     }});
   if (!ok) return [];
   const base = name.value.trim(); if (!base) return [];
-  const added = numberedRooms(base, Math.max(1, Math.min(50, parseInt(qtyEl.value)||1)));
+  const floor = flEl.value;
+  const added = numberedRooms(base, Math.max(1, Math.min(50, parseInt(qtyEl.value)||1)), floor, hotEl.checked);
   if (!added.length) { toast(`“${base}” esiste già`); return []; }
+  if (floor) added.forEach(r => S.settings.roomFloor[r] = floor);
   // inserisci prima di "Da decidere" se presente
   const i = S.settings.rooms.indexOf('Da decidere');
   S.settings.rooms.splice(i < 0 ? S.settings.rooms.length : i, 0, ...added);
   await saveSettings();
   toast(added.length > 1 ? `Aggiunte ${added.length} stanze` : `Aggiunta “${added[0]}”`);
   return added;
+}
+async function addFloorDialog(){
+  const v = await promptBox('Nuovo piano', 'es. Piano 3, Seminterrato, Mansarda'); if (!v) return null;
+  if (!S.settings.floors.includes(v)) { S.settings.floors.push(v); await saveSettings(); toast(`Aggiunto “${v}”`); }
+  return v;
 }
 
 /* =========================================================
@@ -955,10 +1028,15 @@ async function renderExport(){
     <input class="in" id="proj" placeholder="es. Casa Rossi – via Roma" value="${esc(S.settings.project)}">
   </div>
   <div class="sec">
+    <h2>Piani</h2>
+    <div class="listedit" id="floorsEd"></div>
+    <button class="btn block" id="addFloor" style="margin-top:10px">＋ Aggiungi piano</button>
+  </div>
+  <div class="sec">
     <h2>Stanze</h2>
     <div class="listedit" id="roomsEd"></div>
     <button class="btn block" id="addRoom" style="margin-top:10px">＋ Aggiungi stanze</button>
-    <p class="hint">Puoi aggiungerne più di una uguale: es. “Camera” × 8 crea Camera 1 … Camera 8.</p>
+    <p class="hint">Puoi aggiungerne tante insieme: es. “Stanza” × 8 sul Piano 1 crea Stanza 101 … Stanza 108. Tocca il piano accanto a una stanza per spostarla.</p>
   </div>
   <div class="sec">
     <h2>Categorie</h2>
@@ -972,7 +1050,8 @@ async function renderExport(){
     <button class="btn dan block" id="wipe" style="margin-top:12px">Cancella tutti i dati</button>
   </div>`;
   $('#proj').onchange = e => { S.settings.project = e.target.value.trim(); saveSettings(); };
-  drawListEd('roomsEd', S.settings.rooms); drawListEd('catsEd', S.settings.categories);
+  drawListEd('floorsEd', S.settings.floors); drawListEd('roomsEd', S.settings.rooms); drawListEd('catsEd', S.settings.categories);
+  $('#addFloor').onclick = async () => { if (await addFloorDialog()) drawListEd('floorsEd', S.settings.floors); };
   $('#addRoom').onclick = async () => { if ((await addRoomsDialog()).length) drawListEd('roomsEd', S.settings.rooms); };
   $('#addCat').onclick = async () => { const v = await promptBox('Nuova categoria','es. Pianoforte'); if (v && !S.settings.categories.includes(v)) { S.settings.categories.push(v); saveSettings(); drawListEd('catsEd', S.settings.categories); } };
   $('#expZip').onclick = () => doExport('zip');
@@ -983,14 +1062,30 @@ async function renderExport(){
 }
 function drawListEd(id, arr){
   const box = $('#'+id);
+  const isRoom = id === 'roomsEd', isFloor = id === 'floorsEd', RF = S.settings.roomFloor;
   box.innerHTML = arr.map((v,i) => `<div class="row"><span>${esc(v)}</span>
+    ${isRoom ? `<button class="mv" data-mv="${i}">${esc(RF[v]||'tutti i piani')}</button>` : ''}
     <button data-up="${i}" aria-label="Su">↑</button><button data-ren="${i}" aria-label="Rinomina">✎</button><button data-del="${i}" aria-label="Elimina">✕</button></div>`).join('');
-  const field = id === 'roomsEd' ? 'roomTarget' : 'category';
+  const field = isRoom ? 'roomTarget' : isFloor ? 'floor' : 'category';
+  box.querySelectorAll('[data-mv]').forEach(b => b.onclick = async () => { // sposta la stanza su un altro piano
+    const r = arr[+b.dataset.mv];
+    const v = await modal({title:`“${r}”: a quale piano appartiene?`, buttons:[{label:'Tutti i piani', value:'__all', cls:RF[r]?'':'pri'}, ...S.settings.floors.map(f => ({label:f, value:f, cls:f===RF[r]?'pri':''})), {label:'Annulla', value:null}]});
+    if (v == null) return; if (v === '__all') delete RF[r]; else RF[r] = v;
+    saveSettings(); drawListEd(id, arr);
+  });
   box.querySelectorAll('[data-up]').forEach(b => b.onclick = () => { const i=+b.dataset.up; if (i>0) { [arr[i-1],arr[i]]=[arr[i],arr[i-1]]; saveSettings(); drawListEd(id, arr); } });
-  box.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { const i=+b.dataset.del; if (await confirmBox(`Rimuovere “${arr[i]}” dall’elenco?`, 'I mobili già assegnati mantengono il valore.', 'Rimuovi', true)) { arr.splice(i,1); saveSettings(); drawListEd(id, arr); } });
+  box.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { const i=+b.dataset.del; if (await confirmBox(`Rimuovere “${arr[i]}” dall’elenco?`, 'I mobili già assegnati mantengono il valore.', 'Rimuovi', true)) {
+      const old = arr[i]; arr.splice(i,1);
+      if (isRoom) delete RF[old];
+      if (isFloor) Object.keys(RF).forEach(r => { if (RF[r] === old) delete RF[r]; }); // le sue stanze valgono per tutti i piani
+      saveSettings(); drawListEd(id, arr); } });
   box.querySelectorAll('[data-ren]').forEach(b => b.onclick = async () => {
     const i=+b.dataset.ren, old=arr[i]; const v = await promptBox('Rinomina', '', old); if (!v || v===old) return;
-    arr[i] = v; saveSettings();
+    if (arr.includes(v)) return toast(`“${v}” esiste già`);
+    arr[i] = v;
+    if (isRoom && RF[old]) { RF[v] = RF[old]; delete RF[old]; }
+    if (isFloor) Object.keys(RF).forEach(r => { if (RF[r] === old) RF[r] = v; });
+    saveSettings();
     for (const it of S.items.filter(x => x[field] === old)) { it[field] = v; await idb.put('items', it); }
     drawListEd(id, arr);
   });
@@ -1005,13 +1100,13 @@ async function wipeAll(){
 // --- costruzione tabella ---
 function sortedItems(){ return [...S.items].sort((a,b)=>cmp(a.code, b.code)); }
 function buildTable(photoNames){
-  const items = sortedItems();
+  const items = [...S.items].sort((a,b) => placeRank(a) - placeRank(b) || cmp(a.code, b.code)); // per piano e stanza
   const usedX = EXTRAS.filter(e => items.some(it => it.extra?.[e.k] != null));
-  const head = ['Codice','Nome','Categoria','Stanza destinazione','Provenienza','Quantità','Larghezza (cm)','Profondità (cm)','Altezza (cm)',
+  const head = ['Codice','Nome','Categoria','Piano','Stanza destinazione','Provenienza','Quantità','Larghezza (cm)','Profondità (cm)','Altezza (cm)',
     ...usedX.map(e => `${e.l} (${e.u})`), 'Altre misure', 'Ingombro pavimento (m²)', 'Volume (m³)', 'Materiale', 'Finitura / colore', 'Condizioni', 'Note', 'N. foto', 'Foto', 'Data inserimento'];
   const rows = items.map(it => {
     const a = footprint(it), v = volume(it);
-    return [it.code, displayName(it), it.category||'', it.roomTarget||'', it.roomCurrent||'', it.qty||1,
+    return [it.code, displayName(it), it.category||'', it.floor||'', it.roomTarget||'', it.roomCurrent||'', it.qty||1,
       it.dims.larghezza, it.dims.profondita, it.dims.altezza,
       ...usedX.map(e => it.extra?.[e.k] ?? null),
       (it.custom||[]).filter(c=>c.label||c.value!=null).map(c => `${c.label}: ${c.value??'–'} cm`).join('; '),
@@ -1021,15 +1116,12 @@ function buildTable(photoNames){
   });
   return {head, rows, items, photoCol: head.indexOf('Foto')};
 }
-function summary(field, label){
-  const m = new Map();
-  S.items.forEach(it => { const k = it[field] || (field==='roomTarget'?'Da assegnare':'Senza categoria');
-    const r = m.get(k) || {n:0, pcs:0, a:0, v:0, codes:[]};
-    r.n++; r.pcs += it.qty||1; r.a += (footprint(it)||0)*(it.qty||1); r.v += (volume(it)||0)*(it.qty||1); r.codes.push(it.code); m.set(k, r); });
-  const order = field==='roomTarget' ? S.settings.rooms : S.settings.categories;
-  const keys = [...m.keys()].sort((a,b)=>{const ia=order.indexOf(a), ib=order.indexOf(b); return (ia<0?999:ia)-(ib<0?999:ib);});
-  return [[label,'Schede','Pezzi','Ingombro pavimento (m²)','Volume (m³)','Codici'],
-    ...keys.map(k => { const r = m.get(k); return [k, r.n, r.pcs, +r.a.toFixed(2), +r.v.toFixed(2), r.codes.sort(cmp).join(', ')]; })];
+// riepilogo: labels = intestazioni delle colonne chiave, cols(it) = valori di quelle colonne
+function summary(G, labels, cols){
+  return [[...labels,'Schede','Pezzi','Ingombro pavimento (m²)','Volume (m³)','Codici'],
+    ...groupItems(S.items, G.key, G.rank).map(([k, g]) => [...cols(g[0]), g.length, g.reduce((s,i)=>s+(i.qty||1),0),
+      +g.reduce((s,i)=>s+(footprint(i)||0)*(i.qty||1),0).toFixed(2), +g.reduce((s,i)=>s+(volume(i)||0)*(i.qty||1),0).toFixed(2),
+      g.map(i=>i.code).sort(cmp).join(', ')])];
 }
 function buildWorkbook(photoNames){
   const {head, rows, items, photoCol} = buildTable(photoNames);
@@ -1043,17 +1135,19 @@ function buildWorkbook(photoNames){
     if (first) { const ref = XLSX.utils.encode_cell({r:i+1, c:photoCol}); ws[ref].l = {Target:`foto/${first}`, Tooltip:'Apri foto'}; }
   });
   XLSX.utils.book_append_sheet(wb, ws, 'Mobili');
-  const s1 = XLSX.utils.aoa_to_sheet(summary('roomTarget','Stanza')); s1['!cols'] = [{wch:24},{wch:8},{wch:8},{wch:22},{wch:12},{wch:50}];
+  const W = [{wch:8},{wch:8},{wch:22},{wch:12},{wch:50}];
+  const s0 = XLSX.utils.aoa_to_sheet(summary(GROUPS.floor, ['Piano'], it => [it.floor||'Piano non indicato'])); s0['!cols'] = [{wch:20}, ...W];
+  XLSX.utils.book_append_sheet(wb, s0, 'Per piano');
+  const s1 = XLSX.utils.aoa_to_sheet(summary(GROUPS.room, ['Piano','Stanza'], it => [it.floor||'', it.roomTarget||'Da assegnare'])); s1['!cols'] = [{wch:16},{wch:24}, ...W];
   XLSX.utils.book_append_sheet(wb, s1, 'Per stanza');
-  const s2 = XLSX.utils.aoa_to_sheet(summary('category','Categoria')); s2['!cols'] = [{wch:24},{wch:8},{wch:8},{wch:22},{wch:12},{wch:50}];
+  const s2 = XLSX.utils.aoa_to_sheet(summary(GROUPS.cat, ['Categoria'], it => [it.category||'Senza categoria'])); s2['!cols'] = [{wch:24}, ...W];
   XLSX.utils.book_append_sheet(wb, s2, 'Per categoria');
   wb.Props = {Title:`Inventario mobili ${S.settings.project||''}`.trim(), CreatedDate:new Date()};
   return XLSX.write(wb, {type:'array', bookType:'xlsx'});
 }
 function catalogHtml(photoNames){
   const items = sortedItems();
-  const by = new Map(); items.forEach(it => { const k = it.roomTarget||'Da assegnare'; if (!by.has(k)) by.set(k, []); by.get(k).push(it); });
-  const keys = [...by.keys()].sort((a,b)=>{const o=S.settings.rooms; const ia=o.indexOf(a), ib=o.indexOf(b); return (ia<0?999:ia)-(ib<0?999:ib);});
+  const groups = groupItems(items, placeLabel, placeRank);
   const card = it => {
     const ph = photoNames[it.id]||[];
     const ms = [['Larghezza',it.dims.larghezza,'cm'],['Profondità',it.dims.profondita,'cm'],['Altezza',it.dims.altezza,'cm'],
@@ -1080,7 +1174,7 @@ article{background:#fff;border:1px solid #ddd6cb;border-radius:12px;overflow:hid
 table{border-collapse:collapse;width:100%}td{padding:3px 0;border-bottom:1px solid #eee}td:last-child{text-align:right;font-variant-numeric:tabular-nums}
 .nt{background:#f6f3ee;padding:6px 8px;border-radius:6px}@media print{.ph img{height:140px}}
 </style></head><body><header><h1>Catalogo mobili${S.settings.project?` – ${esc(S.settings.project)}`:''}</h1><p>${items.length} schede · esportato il ${new Date().toLocaleDateString('it-IT')}</p></header><main>
-${keys.map(k=>{const g=by.get(k); const a=g.reduce((s,i)=>s+(footprint(i)||0)*(i.qty||1),0); return `<h2>${esc(k)} <small>${g.reduce((s,i)=>s+(i.qty||1),0)} pz${a?` · ${fmt(a,2)} m²`:''}</small></h2><div class="g">${g.map(card).join('')}</div>`;}).join('')}
+${groups.map(([k,g])=>{ const a=g.reduce((s,i)=>s+(footprint(i)||0)*(i.qty||1),0); return `<h2>${esc(k)} <small>${g.reduce((s,i)=>s+(i.qty||1),0)} pz${a?` · ${fmt(a,2)} m²`:''}</small></h2><div class="g">${g.map(card).join('')}</div>`;}).join('')}
 </main></body></html>`;
 }
 function baseName(){ return `Inventario_${slug(S.settings.project)||'mobili'}_${today()}`; }
@@ -1167,6 +1261,8 @@ $('#restoreInput').onchange = async e => {
     }
     if (data.settings) {
       S.settings.rooms = [...new Set([...S.settings.rooms, ...(data.settings.rooms||[])])];
+      S.settings.floors = [...new Set([...S.settings.floors, ...(data.settings.floors||[])])];
+      S.settings.roomFloor = {...(data.settings.roomFloor||{}), ...S.settings.roomFloor};
       S.settings.categories = [...new Set([...S.settings.categories, ...(data.settings.categories||[])])];
       if (!S.settings.project) S.settings.project = data.settings.project || '';
       await saveSettings();

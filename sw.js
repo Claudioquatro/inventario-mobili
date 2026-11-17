@@ -1,5 +1,5 @@
 // Service worker: rende l'app utilizzabile anche senza connessione.
-const CACHE = 'inventario-mobili-v5';
+const CACHE = 'inventario-mobili-v6';
 const FILES = [
   './',
   './index.html',
