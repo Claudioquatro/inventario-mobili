@@ -1,0 +1,1197 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Inventario Mobili</title>
+<meta name="theme-color" content="#2e4a3e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mobili">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+:root{
+  --bg:#f6f3ee; --surface:#ffffff; --surface2:#efeae2; --ink:#1f2622; --muted:#6b736e;
+  --line:#ddd6cb; --brand:#2e4a3e; --brand-ink:#ffffff; --accent:#c9774a; --danger:#b3392f;
+  --chip:#e8e2d8; --chip-on:#2e4a3e; --chip-on-ink:#fff; --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.06);
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#141816; --surface:#1d2320; --surface2:#252c28; --ink:#ece8e1; --muted:#9ba49f;
+    --line:#333b37; --brand:#7fb39b; --brand-ink:#0f1512; --accent:#e09a70; --danger:#ef7a6f;
+    --chip:#2b332f; --chip-on:#7fb39b; --chip-on-ink:#0f1512; --shadow:none;
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{touch-action:manipulation;overscroll-behavior-y:none}
+button,.card,.chip,nav.bottom,header.top{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.btn,.card,.chip,.fab,nav.bottom button,.stepper button,.md .list button{transition:transform .12s ease,filter .12s ease,background-color .15s}
+.btn:active,.card:active,.chip:active,.stepper button:active{transform:scale(.96);filter:brightness(.93)}
+.fab:active{transform:scale(.93)}
+nav.bottom button:active{transform:scale(.9)}
+.md .list button:active{background:var(--surface2)}
+.card{content-visibility:auto;contain-intrinsic-size:auto 98px}
+@keyframes inR{from{opacity:.0;transform:translateX(28px)}to{opacity:1;transform:none}}
+@keyframes inF{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes up{from{transform:translateY(100%)}to{transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes pulse{0%,100%{opacity:.45}50%{opacity:1}}
+.anim-r{animation:inR .22s cubic-bezier(.2,.8,.2,1)}
+.anim-f{animation:inF .18s ease-out}
+.ov{animation:fade .15s ease-out}.ov .md{animation:up .22s cubic-bezier(.2,.8,.2,1)}
+.photos .ph.loading{animation:pulse 1s infinite;background:var(--surface2)}
+.toast{animation:inF .2s ease-out}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-text-size-adjust:100%}
+body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.hidden{display:none!important}
+header.top{position:sticky;top:0;z-index:20;background:var(--brand);color:var(--brand-ink);padding:calc(12px + env(safe-area-inset-top)) 16px 12px;display:flex;align-items:center;gap:12px}
+header.top h1{font-size:19px;margin:0;flex:1;font-weight:650;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header.top .sub{font-size:12px;opacity:.8;font-weight:400}
+header.top button{background:transparent;border:0;color:inherit;font-size:16px;padding:6px 4px}
+main{max-width:760px;margin:0 auto;padding:12px 16px}
+.toolbar{display:flex;gap:8px;margin-bottom:10px}
+.search{flex:1;padding:11px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface)}
+select.sel{padding:10px 10px;border-radius:12px;border:1px solid var(--line);background:var(--surface);max-width:46%}
+.filters{display:flex;gap:8px;margin-bottom:12px}
+.filters select{flex:1;min-width:0;max-width:none}
+.seg{display:flex;background:var(--chip);border-radius:12px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:none;border-radius:9px;padding:8px 4px;font-size:14px;color:var(--muted)}
+.seg button.on{background:var(--surface);color:var(--ink);font-weight:650;box-shadow:var(--shadow)}
+.group-h{display:flex;justify-content:space-between;align-items:baseline;margin:18px 2px 8px;font-weight:650}
+.group-h small{color:var(--muted);font-weight:400;font-size:13px}
+.card{display:flex;gap:12px;background:var(--surface);border-radius:var(--r);padding:10px;box-shadow:var(--shadow);margin-bottom:10px;border:1px solid var(--line);width:100%;text-align:left}
+.card .th{width:76px;height:76px;border-radius:10px;background:var(--surface2) center/cover no-repeat;flex:none;display:grid;place-items:center;color:var(--muted);font-size:26px}
+.card .info{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
+.card .t{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .code{color:var(--accent);font-weight:700;margin-right:6px;font-variant-numeric:tabular-nums}
+.card .m{font-variant-numeric:tabular-nums;font-size:15px}
+.card .meta{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{display:inline-block;background:var(--chip);border-radius:20px;padding:1px 8px;font-size:12px;margin-right:4px}
+.empty{text-align:center;color:var(--muted);padding:50px 20px}
+.empty .big{font-size:52px}
+.fab{position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:30;background:var(--accent);color:#fff;border:0;border-radius:30px;padding:16px 22px;font-size:17px;font-weight:650;box-shadow:0 6px 20px rgba(0,0,0,.25);display:flex;gap:8px;align-items:center}
+nav.bottom{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--surface);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom)}
+nav.bottom button{flex:1;border:0;background:none;padding:10px 0 12px;font-size:12px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px}
+nav.bottom button .i{font-size:22px;line-height:1}
+nav.bottom button.on{color:var(--brand);font-weight:650}
+/* editor */
+.sec{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px;box-shadow:var(--shadow)}
+.sec h2{font-size:14px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:0 0 10px;font-weight:650}
+label.f{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+input.in,textarea.in,select.in{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--bg)}
+textarea.in{min-height:80px;resize:vertical}
+input.in:focus,textarea.in:focus,select.in:focus,.search:focus{outline:2px solid var(--brand);outline-offset:0;border-color:transparent}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:0;background:var(--chip);border-radius:20px;padding:8px 12px;font-size:14px}
+.chip.on{background:var(--chip-on);color:var(--chip-on-ink);font-weight:600}
+.photos{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.photos .ph{position:relative;width:96px;height:96px;flex:none;border-radius:10px;background:var(--surface2) center/cover no-repeat;border:0}
+.photos .ph .x{position:absolute;top:-6px;right:-6px;width:26px;height:26px;border-radius:50%;background:var(--danger);color:#fff;border:2px solid var(--surface);font-size:14px;line-height:20px;padding:0}
+.photo-btns{display:flex;gap:8px;margin-top:10px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px 14px;font-weight:600}
+.btn.pri{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.btn.acc{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.dan{color:var(--danger);border-color:var(--danger);background:transparent}
+.btn.block{width:100%}
+.btn.grow{flex:1}
+.dims{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:end}
+.dims .d label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+.dims input{width:100%;padding:14px 8px;font-size:22px;font-weight:650;text-align:center;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-variant-numeric:tabular-nums}
+.dims input:focus{outline:2px solid var(--brand);border-color:transparent}
+.unit{font-size:12px;color:var(--muted)}
+.computed{margin-top:10px;font-size:14px;color:var(--muted)}
+.computed b{color:var(--ink)}
+.xrow{display:flex;gap:8px;align-items:center;margin-top:8px}
+.xrow .lbl{flex:1;font-size:15px;min-width:0}
+.xrow input.v{width:96px;padding:11px 8px;border-radius:10px;border:1px solid var(--line);background:var(--bg);text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.xrow input.lbl{padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--bg)}
+.xrow .u{width:26px;font-size:13px;color:var(--muted)}
+.xrow .rm{border:0;background:none;color:var(--muted);font-size:20px;padding:4px 6px}
+.add-x{margin-top:12px}
+.stepper{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;width:max-content}
+.stepper button{border:0;background:var(--surface2);width:44px;height:44px;font-size:20px}
+.stepper input{width:56px;height:44px;border:0;text-align:center;background:var(--bg);font-weight:650}
+.savebar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom));display:flex;gap:8px}
+.savebar .btn{flex:1;padding:12px 6px;min-height:54px;line-height:1.15;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.savebar #cancel{flex:.8}
+.savebar #saveNext{font-size:14px}
+.diagram{display:block;margin:0 auto 6px;color:var(--muted)}
+/* modal */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:flex-end;justify-content:center}
+.md{background:var(--surface);width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom));max-height:86vh;overflow:auto}
+@media (min-width:600px){.ov{align-items:center}.md{border-radius:18px}}
+.md h3{margin:0 0 8px;font-size:18px}
+.md p{margin:6px 0 14px;color:var(--muted)}
+.md .btns{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.md .list button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;padding:13px 4px;font-size:16px}
+.viewer{position:fixed;inset:0;background:#000;z-index:110;display:flex;align-items:center;justify-content:center}
+.viewer img{max-width:100%;max-height:100%}
+.viewer button{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;background:rgba(255,255,255,.2);color:#fff;border:0;border-radius:20px;padding:8px 14px}
+.toast{pointer-events:none;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;z-index:120;font-size:15px;max-width:90vw;text-align:center}
+.stat{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
+.stat:last-child{border-bottom:0}
+.stat span:last-child{font-variant-numeric:tabular-nums;color:var(--muted)}
+.hint{font-size:13px;color:var(--muted);margin:8px 0 0}
+.listedit .row{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.listedit .row span{flex:1}
+.listedit .row button{border:0;background:none;color:var(--muted);font-size:18px;padding:4px 8px}
+.busy{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:130;display:grid;place-items:center;color:#fff;font-size:17px}
+</style>
+</head>
+<body>
+<header class="top">
+  <button id="backBtn" class="hidden" aria-label="Indietro">← </button>
+  <h1 id="title">Inventario Mobili</h1>
+</header>
+<main id="app"></main>
+<button class="fab" id="fab">📷 Nuovo mobile</button>
+<nav class="bottom" id="nav">
+  <button data-go="#/" id="navList"><span class="i">🪑</span>Mobili</button>
+  <button data-go="#/stanze" id="navRooms"><span class="i">🏠</span>Stanze</button>
+  <button data-go="#/esporta" id="navExport"><span class="i">📤</span>Esporta</button>
+</nav>
+<input type="file" accept="image/*" capture="environment" id="camInput" class="hidden">
+<input type="file" accept="image/*" multiple id="galInput" class="hidden">
+<input type="file" accept=".zip,application/zip" id="restoreInput" class="hidden">
+
+<script src="vendor/jszip.min.js"></script>
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="caption.js"></script>
+<script>
+'use strict';
+/* =========================================================
+   CONFIGURAZIONE
+   ========================================================= */
+const DEFAULT_ROOMS = ['Soggiorno','Sala da pranzo','Cucina','Camera matrimoniale','Camera singola','Cameretta','Studio','Bagno','Ingresso','Corridoio','Terrazzo / Esterno','Cantina / Deposito','Da decidere'];
+const DEFAULT_CATS = ['Armadio','Cassettiera / Comò','Comodino','Letto','Divano','Poltrona','Sedia','Tavolo','Tavolino','Scrivania','Libreria','Credenza / Madia','Mobile TV','Vetrina','Specchio','Lampada','Tappeto','Quadro','Altro'];
+
+// Misure aggiuntive predefinite (u = unità)
+const EXTRAS = [
+  {k:'altezzaPiano',      l:'Altezza piano di lavoro', u:'cm'},
+  {k:'spessorePiano',     l:'Spessore piano',          u:'cm'},
+  {k:'diametro',          l:'Diametro',                u:'cm'},
+  {k:'lunghezzaAllungato',l:'Lunghezza allungato',     u:'cm'},
+  {k:'luceGambe',         l:'Luce tra le gambe',       u:'cm'},
+  {k:'altezzaSeduta',     l:'Altezza seduta',          u:'cm'},
+  {k:'profonditaSeduta',  l:'Profondità seduta',       u:'cm'},
+  {k:'altezzaSchienale',  l:'Altezza schienale',       u:'cm'},
+  {k:'altezzaBraccioli',  l:'Altezza braccioli',       u:'cm'},
+  {k:'altezzaDaTerra',    l:'Altezza da terra (gambe/zoccolo)', u:'cm'},
+  {k:'ingombroAnte',      l:'Ingombro ante aperte',    u:'cm'},
+  {k:'ingombroCassetti',  l:'Ingombro cassetti aperti',u:'cm'},
+  {k:'larghezzaInterna',  l:'Larghezza interna',       u:'cm'},
+  {k:'profonditaInterna', l:'Profondità interna',      u:'cm'},
+  {k:'altezzaInterna',    l:'Altezza interna',         u:'cm'},
+  {k:'larghezzaMaterasso',l:'Larghezza materasso',     u:'cm'},
+  {k:'lunghezzaMaterasso',l:'Lunghezza materasso',     u:'cm'},
+  {k:'altezzaRete',       l:'Altezza rete',            u:'cm'},
+  {k:'altezzaTestiera',   l:'Altezza testiera',        u:'cm'},
+  {k:'spessore',          l:'Spessore',                u:'cm'},
+  {k:'numeroAnte',        l:'Numero ante',             u:'n'},
+  {k:'numeroCassetti',    l:'Numero cassetti',         u:'n'},
+  {k:'numeroRipiani',     l:'Numero ripiani',          u:'n'},
+  {k:'numeroPosti',       l:'Numero posti',            u:'n'},
+  {k:'peso',              l:'Peso stimato',            u:'kg'},
+];
+const EXTRA = Object.fromEntries(EXTRAS.map(e => [e.k, e]));
+
+// Misure suggerite per categoria
+const CAT_EXTRAS = {
+  'Armadio':['ingombroAnte','larghezzaInterna','profonditaInterna','altezzaInterna','numeroAnte','numeroCassetti','altezzaDaTerra'],
+  'Cassettiera / Comò':['numeroCassetti','ingombroCassetti','altezzaDaTerra'],
+  'Comodino':['numeroCassetti','altezzaDaTerra'],
+  'Letto':['larghezzaMaterasso','lunghezzaMaterasso','altezzaRete','altezzaTestiera'],
+  'Divano':['altezzaSeduta','profonditaSeduta','altezzaSchienale','altezzaBraccioli','numeroPosti'],
+  'Poltrona':['altezzaSeduta','profonditaSeduta','altezzaSchienale','altezzaBraccioli'],
+  'Sedia':['altezzaSeduta','profonditaSeduta','altezzaSchienale'],
+  'Tavolo':['altezzaPiano','spessorePiano','diametro','lunghezzaAllungato','luceGambe','numeroPosti'],
+  'Tavolino':['spessorePiano','diametro'],
+  'Scrivania':['altezzaPiano','spessorePiano','luceGambe','numeroCassetti'],
+  'Libreria':['numeroRipiani','profonditaInterna','altezzaDaTerra'],
+  'Credenza / Madia':['ingombroAnte','numeroAnte','numeroCassetti','altezzaPiano','altezzaDaTerra'],
+  'Mobile TV':['numeroAnte','numeroCassetti','altezzaDaTerra'],
+  'Vetrina':['numeroAnte','numeroRipiani','profonditaInterna','ingombroAnte'],
+  'Specchio':['spessore'],
+  'Quadro':['spessore'],
+  'Lampada':['diametro'],
+};
+const CONDITIONS = ['Ottimo','Buono','Discreto','Da restaurare','Da eliminare'];
+
+/* =========================================================
+   DATABASE (IndexedDB: i dati restano sul telefono)
+   ========================================================= */
+let _db;
+function openDb(){
+  return _db ||= new Promise((res, rej) => {
+    const r = indexedDB.open('inventario-mobili', 1);
+    r.onupgradeneeded = () => {
+      const d = r.result;
+      d.createObjectStore('items', {keyPath:'id'});
+      d.createObjectStore('photos', {keyPath:'id'}).createIndex('itemId','itemId');
+      d.createObjectStore('kv');
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function tx(store, mode, fn){
+  const d = await openDb();
+  return new Promise((res, rej) => {
+    const t = d.transaction(store, mode); let out;
+    const r = fn(t.objectStore(store));
+    if (r) r.onsuccess = () => { out = r.result; };
+    t.oncomplete = () => res(out);
+    t.onerror = t.onabort = () => rej(t.error);
+  });
+}
+const idb = {
+  get:(s,k) => tx(s,'readonly', st => st.get(k)),
+  all:(s) => tx(s,'readonly', st => st.getAll()),
+  put:(s,v,k) => tx(s,'readwrite', st => k === undefined ? st.put(v) : st.put(v,k)),
+  del:(s,k) => tx(s,'readwrite', st => st.delete(k)),
+  clear:(s) => tx(s,'readwrite', st => st.clear()),
+  photosOf:(itemId) => tx('photos','readonly', st => st.index('itemId').getAll(itemId)),
+};
+
+/* =========================================================
+   UTILITY
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const app = $('#app');
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num = v => { if (v === '' || v == null) return null; const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) ? n : null; };
+const fmt = (n, d=1) => n == null ? '' : n.toLocaleString('it-IT', {maximumFractionDigits:d});
+const slug = s => String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40);
+const collator = new Intl.Collator('it', {numeric:true, sensitivity:'base'});
+const cmp = (a, b) => collator.compare(String(a ?? ''), String(b ?? ''));
+const today = () => new Date().toISOString().slice(0,10);
+
+function footprint(it){ // m²
+  const {larghezza:L, profondita:P} = it.dims || {};
+  if (L && P) return L*P/10000;
+  const d = it.extra?.diametro;
+  if (d) return Math.PI*(d/2)**2/10000;
+  return null;
+}
+function volume(it){ // m³
+  const {larghezza:L, profondita:P, altezza:H} = it.dims || {};
+  return (L && P && H) ? L*P*H/1e6 : null;
+}
+function dimsText(it){
+  const {larghezza:L, profondita:P, altezza:H} = it.dims || {};
+  const parts = [L,P,H].map(v => v == null ? '–' : fmt(v));
+  if (L==null && P==null && H==null) return it.extra?.diametro ? `Ø ${fmt(it.extra.diametro)} cm` : 'Misure da inserire';
+  return `${parts.join(' × ')} cm`;
+}
+function displayName(it){ return it.name?.trim() || it.category || 'Senza nome'; }
+
+let toastT;
+function toast(msg){
+  document.querySelectorAll('.toast').forEach(e => e.remove());
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t); clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2600);
+}
+function busy(msg){
+  const b = document.createElement('div'); b.className = 'busy'; b.textContent = msg;
+  document.body.appendChild(b); return { set:m => b.textContent = m, done:() => b.remove() };
+}
+// Finestra di dialogo: ritorna il valore del pulsante premuto (o null)
+function modal({title, text='', html='', buttons=[{label:'OK', value:true, cls:'pri'}], onMount}){
+  return new Promise(res => {
+    const ov = document.createElement('div'); ov.className = 'ov';
+    ov.innerHTML = `<div class="md" role="dialog"><h3>${esc(title)}</h3>${text?`<p>${esc(text)}</p>`:''}${html}
+      <div class="btns">${buttons.map((b,i)=>`<button class="btn block ${b.cls||''}" data-i="${i}">${esc(b.label)}</button>`).join('')}</div></div>`;
+    const close = v => { ov.remove(); res(v); };
+    ov.addEventListener('click', e => {
+      if (e.target === ov) return close(null);
+      const b = e.target.closest('[data-i]'); if (b) close(buttons[+b.dataset.i].value);
+    });
+    document.body.appendChild(ov);
+    onMount?.(ov.querySelector('.md'), close);
+  });
+}
+const confirmBox = (title, text, okLabel='Conferma', danger=false) =>
+  modal({title, text, buttons:[{label:okLabel, value:true, cls:danger?'dan':'pri'},{label:'Annulla', value:false}]});
+async function promptBox(title, placeholder='', value=''){
+  let inp;
+  const ok = await modal({title, html:`<input class="in" id="pb" placeholder="${esc(placeholder)}" value="${esc(value)}">`,
+    buttons:[{label:'OK', value:true, cls:'pri'},{label:'Annulla', value:false}],
+    onMount:(md, close) => { inp = md.querySelector('#pb'); setTimeout(()=>inp.focus(), 50);
+      inp.addEventListener('keydown', e => { if (e.key==='Enter') { md.parentElement.remove(); close(true); } }); }});
+  return ok ? inp.value.trim() : null;
+}
+
+/* =========================================================
+   FOTO: ridimensiona (max 2000px) + miniatura
+   ========================================================= */
+async function loadBitmap(blob){
+  try { return await createImageBitmap(blob, {imageOrientation:'from-image'}); }
+  catch {
+    return await new Promise((res, rej) => { const img = new Image(); const u = URL.createObjectURL(blob);
+      img.onload = () => { res(img); URL.revokeObjectURL(u); }; img.onerror = rej; img.src = u; });
+  }
+}
+async function resize(bmp, max, q){
+  const w0 = bmp.width, h0 = bmp.height, s = Math.min(1, max/Math.max(w0,h0));
+  const c = document.createElement('canvas'); c.width = Math.round(w0*s); c.height = Math.round(h0*s);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  return new Promise(res => c.toBlob(res, 'image/jpeg', q));
+}
+// Worker per elaborare le foto fuori dal thread principale (fallback: thread principale)
+let photoWorker = null, pwSeq = 0; const pwWait = new Map();
+try {
+  if (typeof OffscreenCanvas !== 'undefined' && 'convertToBlob' in OffscreenCanvas.prototype) {
+    photoWorker = new Worker('photo-worker.js');
+    photoWorker.onmessage = e => { const p = pwWait.get(e.data.id); pwWait.delete(e.data.id); e.data.error ? p.rej(new Error(e.data.error)) : p.res(e.data.out); };
+    photoWorker.onerror = () => { photoWorker = null; pwWait.forEach(p => p.rej(new Error('worker'))); pwWait.clear(); };
+  }
+} catch { photoWorker = null; }
+async function processImage(blob, sizes){
+  if (photoWorker) {
+    try { return await new Promise((res, rej) => { const id = ++pwSeq; pwWait.set(id, {res, rej}); photoWorker.postMessage({id, blob, sizes}); }); }
+    catch (e) { console.warn('worker foto non disponibile, uso il thread principale', e); }
+  }
+  const bmp = await loadBitmap(blob); const out = [];
+  for (const [max, q] of sizes) out.push(await resize(bmp, max, q));
+  bmp.close?.(); return out;
+}
+// Foto con fascia delle misure in basso
+function captionLines(it){
+  const {larghezza:L, profondita:P, altezza:A} = it.dims || {};
+  const m = [L!=null?`L ${fmt(L)}`:'', P!=null?`P ${fmt(P)}`:'', A!=null?`A ${fmt(A)}`:''].filter(Boolean).join(' × ');
+  const extra = [...Object.entries(it.extra||{}).filter(([k,v]) => EXTRA[k] && v!=null).map(([k,v]) => `${EXTRA[k].l} ${fmt(v)}${EXTRA[k].u==='n'?'':' '+EXTRA[k].u}`),
+    ...(it.custom||[]).filter(c => c.label && c.value!=null).map(c => `${c.label} ${fmt(c.value)} cm`)];
+  const lines = [`${it.code}  ${displayName(it)}${it.qty>1?`  ×${it.qty}`:''}`,
+    [m ? m+' cm' : (it.extra?.diametro ? `Ø ${fmt(it.extra.diametro)} cm` : 'misure da inserire'), `→ ${it.roomTarget||'stanza da decidere'}`].join('   ')];
+  for (let i = 0; i < extra.length; i += 3) lines.push(extra.slice(i, i+3).join(' · '));
+  const det = [it.category, it.material, it.finish, it.condition].filter(Boolean).join(' · ');
+  if (det) lines.push(det);
+  return lines;
+}
+async function annotatePhoto(blob, lines){
+  if (photoWorker) {
+    try { return (await new Promise((res, rej) => { const id = ++pwSeq; pwWait.set(id, {res, rej}); photoWorker.postMessage({id, blob, caption:lines}); }))[0]; }
+    catch (e) { console.warn('worker non disponibile', e); }
+  }
+  const bmp = await loadBitmap(blob);
+  const {W, H} = captionLayout(bmp.width, bmp.height, lines);
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  drawCaption(c.getContext('2d'), bmp, lines); bmp.close?.();
+  return new Promise(res => c.toBlob(res, 'image/jpeg', 0.85));
+}
+async function storePhoto(file, itemId){
+  const [blob, thumb] = await processImage(file, [[2000, 0.85], [320, 0.75]]);
+  const p = {id:uid(), itemId, blob, thumb, createdAt:Date.now()};
+  await idb.put('photos', p);
+  return p.id;
+}
+const thumbUrls = new Map();
+async function thumbUrl(photoId){
+  if (thumbUrls.has(photoId)) return thumbUrls.get(photoId);
+  const p = await idb.get('photos', photoId); if (!p) return null;
+  const u = URL.createObjectURL(p.thumb || p.blob); thumbUrls.set(photoId, u); return u;
+}
+function forgetThumb(id){ const u = thumbUrls.get(id); if (u) { URL.revokeObjectURL(u); thumbUrls.delete(id); } }
+
+/* =========================================================
+   STATO
+   ========================================================= */
+const S = {
+  items: [],
+  settings: {project:'', rooms:[...DEFAULT_ROOMS], categories:[...DEFAULT_CATS]},
+  filter: {q:'', room:'', cat:''},
+  group: 'room',
+};
+let F = null;   // scheda in modifica
+let F_orig = null;
+
+async function loadAll(){
+  S.items = await idb.all('items');
+  const st = await idb.get('kv', 'settings'); if (st) Object.assign(S.settings, st);
+  const ui = await idb.get('kv', 'ui'); if (ui) { S.group = ui.group || 'room'; }
+}
+const saveSettings = () => idb.put('kv', S.settings, 'settings');
+const saveUi = () => idb.put('kv', {group:S.group}, 'ui');
+
+function newItem(){
+  return { id:uid(), code:'', isNew:true, createdAt:Date.now(), updatedAt:Date.now(),
+    name:'', category:'', roomTarget:'', roomCurrent:'', qty:1,
+    dims:{larghezza:null, profondita:null, altezza:null}, extra:{}, shownExtras:[], custom:[],
+    material:'', finish:'', condition:'', notes:'', photoIds:[], _added:[], _removed:[] };
+}
+function nextCode(){
+  const max = S.items.reduce((m,it) => Math.max(m, parseInt(String(it.code).replace(/\D/g,''))||0), 0);
+  return 'M' + String(max+1).padStart(3,'0');
+}
+let draftT;
+function saveDraft(){ clearTimeout(draftT); draftT = setTimeout(() => F && idb.put('kv', F, 'draft'), 300); }
+const clearDraft = () => { clearTimeout(draftT); return idb.del('kv', 'draft'); };
+
+/* =========================================================
+   ROUTER
+   ========================================================= */
+function go(hash){ if (location.hash === hash) render(); else location.hash = hash; }
+window.addEventListener('hashchange', render);
+document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
+$('#backBtn').onclick = () => cancelEdit();
+
+function setChrome({title, back=false, fab=false, nav=true, tab}){
+  $('#title').innerHTML = title;
+  $('#backBtn').classList.toggle('hidden', !back);
+  $('#fab').classList.toggle('hidden', !fab);
+  $('#nav').classList.toggle('hidden', !nav);
+  document.body.style.paddingBottom = nav ? '' : 'calc(90px + env(safe-area-inset-bottom))';
+  ['navList','navRooms','navExport'].forEach(id => $('#'+id).classList.toggle('on', id === tab));
+}
+
+let lastView = '', listScroll = 0;
+async function render(){
+  const h = location.hash || '#/';
+  if (lastView === '#/') listScroll = window.scrollY;
+  if (h.startsWith('#/scheda')) {
+    if (!F) { // ricarica pagina: recupera la bozza
+      F = await idb.get('kv','draft');
+      if (!F) return go('#/');
+    }
+    document.querySelectorAll('.savebar').forEach(e => e.remove());
+    renderEditor(); animate('anim-r'); lastView = h; return;
+  }
+  if (F) { // l'utente ha lasciato l'editor col tasto indietro
+    const keep = await leaveEditorCheck(); if (!keep) return;
+  }
+  document.querySelectorAll('.savebar').forEach(e => e.remove());
+  lastView = h;
+  if (h === '#/esporta') await renderExport();
+  else if (h === '#/stanze') renderRooms();
+  else renderList();
+  window.scrollTo(0, h === '#/' ? listScroll : 0); // l'elenco riprende da dove si era
+  animate('anim-f');
+}
+function animate(cls){
+  app.classList.remove('anim-r','anim-f'); void app.offsetWidth; app.classList.add(cls);
+}
+
+/* =========================================================
+   ELENCO MOBILI
+   ========================================================= */
+function filtered(){
+  const q = S.filter.q.toLowerCase().trim();
+  return S.items.filter(it =>
+    (!S.filter.room || (it.roomTarget||'Da assegnare') === S.filter.room) &&
+    (!S.filter.cat || (it.category||'Senza categoria') === S.filter.cat) &&
+    (!q || [it.code, it.name, it.category, it.roomTarget, it.roomCurrent, it.material, it.finish, it.notes].join(' ').toLowerCase().includes(q))
+  ).sort((a,b) => cmp(b.code, a.code));
+}
+function groupKey(it){ return S.group === 'room' ? (it.roomTarget || 'Da assegnare') : S.group === 'cat' ? (it.category || 'Senza categoria') : ''; }
+
+async function renderList(){
+  setChrome({title:`Inventario Mobili${S.settings.project?`<div class="sub">${esc(S.settings.project)}</div>`:''}`, fab:true, tab:'navList'});
+  const rooms = [...new Set([...S.settings.rooms, ...S.items.map(i=>i.roomTarget||'Da assegnare')])];
+  const cats = [...new Set([...S.settings.categories, ...S.items.map(i=>i.category||'Senza categoria')])];
+  if (!S.items.length) {
+    app.innerHTML = `<div class="empty"><div class="big">🛋️</div><h2>Nessun mobile ancora</h2>
+      <p>Premi <b>📷 Nuovo mobile</b>: si apre la fotocamera, scatti la foto e subito dopo inserisci le misure.</p></div>`;
+    return;
+  }
+  app.innerHTML = `
+    <div class="toolbar"><input class="search" id="q" type="search" placeholder="🔍 Cerca (nome, codice, materiale…)" value="${esc(S.filter.q)}"></div>
+    <div class="filters">
+      <select class="sel" id="fRoom"><option value="">Tutte le stanze</option>${rooms.map(r=>`<option ${r===S.filter.room?'selected':''}>${esc(r)}</option>`).join('')}</select>
+      <select class="sel" id="fCat"><option value="">Tutte le categorie</option>${cats.map(r=>`<option ${r===S.filter.cat?'selected':''}>${esc(r)}</option>`).join('')}</select>
+    </div>
+    <div class="seg" role="tablist" aria-label="Raggruppa">${[['room','Per stanza'],['cat','Per categoria'],['none','Tutti']].map(([v,l])=>`<button data-grp="${v}" class="${S.group===v?'on':''}">${l}</button>`).join('')}</div>
+    <div id="list"></div>`;
+  $('#q').oninput = e => { S.filter.q = e.target.value; drawList(); };
+  $('#fRoom').onchange = e => { S.filter.room = e.target.value; drawList(); };
+  $('#fCat').onchange = e => { S.filter.cat = e.target.value; drawList(); };
+  app.querySelectorAll('[data-grp]').forEach(b => b.onclick = () => { S.group = b.dataset.grp; saveUi();
+    app.querySelectorAll('[data-grp]').forEach(x => x.classList.toggle('on', x === b)); drawList(); });
+  drawList();
+}
+function drawList(){
+  const list = $('#list'); if (!list) return;
+  const items = filtered();
+  if (!items.length) { list.innerHTML = `<div class="empty">Nessun risultato.</div>`; return; }
+  const groups = new Map();
+  items.forEach(it => { const k = groupKey(it); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(it); });
+  const order = S.group === 'room' ? S.settings.rooms : S.group === 'cat' ? S.settings.categories : [];
+  const keys = [...groups.keys()].sort((a,b) => { const ia = order.indexOf(a), ib = order.indexOf(b); return (ia<0?999:ia)-(ib<0?999:ib) || cmp(a, b); });
+  list.innerHTML = keys.map(k => {
+    const g = groups.get(k);
+    const pcs = g.reduce((s,i)=>s+(i.qty||1),0);
+    const area = g.reduce((s,i)=>s+(footprint(i)||0)*(i.qty||1),0);
+    return `${S.group!=='none'?`<div class="group-h"><span>${esc(k)}</span><small>${pcs} pz${area?` · ${fmt(area,2)} m²`:''}</small></div>`:''}
+      ${g.map(it => `<button class="card" data-id="${it.id}">
+        <div class="th" data-ph="${it.photoIds[0]||''}"${thumbUrls.has(it.photoIds[0])?` style="background-image:url(${thumbUrls.get(it.photoIds[0])})"`:''}>${it.photoIds[0]?'':'🪑'}</div>
+        <div class="info">
+          <div class="t"><span class="code">${esc(it.code)}</span>${esc(displayName(it))}${it.qty>1?` <span class="badge">×${it.qty}</span>`:''}</div>
+          <div class="m">${dimsText(it)}</div>
+          <div class="meta">${S.group!=='cat'&&it.category?`<span class="badge">${esc(it.category)}</span>`:''}${S.group!=='room'?`<span class="badge">→ ${esc(it.roomTarget||'Da assegnare')}</span>`:''}${esc([it.material,it.finish].filter(Boolean).join(' · '))}</div>
+        </div></button>`).join('')}`;
+  }).join('');
+  list.querySelectorAll('.card').forEach(c => c.onclick = () => openEditor(c.dataset.id));
+  list.querySelectorAll('[data-ph]').forEach(async el => { if (el.dataset.ph && !el.style.backgroundImage) { const u = await thumbUrl(el.dataset.ph); if (u) el.style.backgroundImage = `url(${u})`; } });
+}
+
+/* =========================================================
+   STANZE (riepilogo)
+   ========================================================= */
+function renderRooms(){
+  setChrome({title:'Riepilogo per stanza', fab:true, tab:'navRooms'});
+  const by = new Map();
+  S.items.forEach(it => { const k = it.roomTarget || 'Da assegnare'; if (!by.has(k)) by.set(k, []); by.get(k).push(it); });
+  const keys = [...by.keys()].sort((a,b)=>{const o=S.settings.rooms; const ia=o.indexOf(a), ib=o.indexOf(b); return (ia<0?999:ia)-(ib<0?999:ib);});
+  if (!keys.length) { app.innerHTML = `<div class="empty"><div class="big">🏠</div>Aggiungi qualche mobile per vedere il riepilogo per stanza.</div>`; return; }
+  app.innerHTML = keys.map(k => {
+    const g = by.get(k);
+    const pcs = g.reduce((s,i)=>s+(i.qty||1),0);
+    const area = g.reduce((s,i)=>s+(footprint(i)||0)*(i.qty||1),0);
+    const vol = g.reduce((s,i)=>s+(volume(i)||0)*(i.qty||1),0);
+    const cats = {}; g.forEach(i => { const c=i.category||'Senza categoria'; cats[c]=(cats[c]||0)+(i.qty||1); });
+    return `<div class="sec"><h2 style="color:var(--ink);text-transform:none;font-size:17px;letter-spacing:0">${esc(k)}</h2>
+      <div class="stat"><span>Pezzi</span><span>${pcs}</span></div>
+      <div class="stat"><span>Ingombro a pavimento</span><span>${fmt(area,2)} m²</span></div>
+      <div class="stat"><span>Volume</span><span>${fmt(vol,2)} m³</span></div>
+      <div class="stat"><span>Composizione</span><span style="text-align:right">${Object.entries(cats).map(([c,n])=>`${esc(c)} ${n}`).join(', ')}</span></div>
+      <button class="btn block" style="margin-top:10px" data-room="${esc(k)}">Vedi mobili</button></div>`;
+  }).join('');
+  app.querySelectorAll('[data-room]').forEach(b => b.onclick = () => { S.filter = {q:'', room:b.dataset.room, cat:''}; go('#/'); });
+}
+
+/* =========================================================
+   SCHEDA MOBILE (EDITOR)
+   ========================================================= */
+async function openEditor(id){
+  const it = S.items.find(i => i.id === id); if (!it) return;
+  F = structuredClone(it); F.isNew = false; F._added = []; F._removed = [];
+  F.shownExtras = [...new Set([...(F.shownExtras||[]), ...Object.keys(F.extra||{})])];
+  F_orig = JSON.stringify(it);
+  await idb.put('kv', F, 'draft');
+  go('#/scheda');
+}
+function startNew(openCamera){
+  F = newItem(); F_orig = null;
+  if (S.lastRoom) F.roomTarget = S.lastRoom;
+  if (openCamera) $('#camInput').click(); // deve avvenire subito dopo il tocco
+  idb.put('kv', F, 'draft');
+  go('#/scheda');
+}
+$('#fab').onclick = () => startNew(true);
+
+function chipsHtml(list, value, attr){
+  return `<div class="chips">${list.map(v => `<button type="button" class="chip ${v===value?'on':''}" data-${attr}="${esc(v)}">${esc(v)}</button>`).join('')}</div>`;
+}
+
+function renderEditor(){
+  setChrome({title: F.isNew ? 'Nuovo mobile' : `Scheda ${esc(F.code)}`, back:true, nav:false});
+  const cats = S.settings.categories, rooms = S.settings.rooms;
+  app.innerHTML = `
+  <div class="sec">
+    <h2>Foto</h2>
+    <div class="photos" id="photos"></div>
+    <div class="photo-btns">
+      <button class="btn acc grow" id="takePh">📷 Scatta foto</button>
+      <button class="btn grow" id="galPh">🖼️ Dalla galleria</button>
+    </div>
+    ${F.isNew ? '' : `<button class="btn block" id="sharePh" style="margin-top:8px">🏷️ Foto con misure → salva / condividi</button>`}
+  </div>
+
+  <div class="sec">
+    <h2>Misure principali <span class="unit">(cm)</span></h2>
+    <svg class="diagram" width="150" height="86" viewBox="0 0 150 86" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+      <path d="M30 30 L90 30 L110 16 L50 16 Z M30 30 L30 74 L90 74 L90 30 M90 74 L110 60 L110 16"/>
+      <text x="60" y="84" font-size="10" fill="currentColor" stroke="none" text-anchor="middle">L larghezza</text>
+      <text x="122" y="44" font-size="10" fill="currentColor" stroke="none">A</text>
+      <text x="104" y="12" font-size="10" fill="currentColor" stroke="none">P</text>
+    </svg>
+    <div class="dims">
+      <div class="d"><label for="dL">Larghezza (L)</label><input id="dL" inputmode="decimal" enterkeyhint="next" autocomplete="off" data-dim="larghezza" value="${F.dims.larghezza??''}"></div>
+      <div class="d"><label for="dP">Profondità (P)</label><input id="dP" inputmode="decimal" enterkeyhint="next" autocomplete="off" data-dim="profondita" value="${F.dims.profondita??''}"></div>
+      <div class="d"><label for="dA">Altezza (A)</label><input id="dA" inputmode="decimal" enterkeyhint="done" autocomplete="off" data-dim="altezza" value="${F.dims.altezza??''}"></div>
+    </div>
+    <div class="computed" id="computed"></div>
+  </div>
+
+  <div class="sec">
+    <h2>Tipo di mobile</h2>
+    <label class="f" for="name">Nome / descrizione</label>
+    <input class="in" id="name" placeholder="es. Armadio noce 3 ante" value="${esc(F.name)}">
+    <label class="f">Categoria</label>
+    ${chipsHtml(cats, F.category, 'cat')}
+    <label class="f">Quantità (pezzi identici)</label>
+    <div class="stepper"><button type="button" id="qMinus">−</button><input id="qty" inputmode="numeric" value="${F.qty||1}"><button type="button" id="qPlus">+</button></div>
+  </div>
+
+  <div class="sec">
+    <h2>Misure aggiuntive</h2>
+    <div id="extras"></div>
+    <button class="btn block add-x" id="addX">＋ Aggiungi misura</button>
+  </div>
+
+  <div class="sec">
+    <h2>Stanza di destinazione</h2>
+    <div id="roomChips">${chipsHtml(rooms, F.roomTarget, 'room')}</div>
+    <label class="f" for="roomCur">Dove si trova ora (provenienza)</label>
+    <input class="in" id="roomCur" list="roomList" placeholder="es. Casa vecchia – salotto" value="${esc(F.roomCurrent)}">
+    <datalist id="roomList">${rooms.map(r=>`<option value="${esc(r)}">`).join('')}</datalist>
+  </div>
+
+  <div class="sec">
+    <h2>Dettagli</h2>
+    <label class="f" for="mat">Materiale</label>
+    <input class="in" id="mat" list="matList" placeholder="es. legno massello di noce" value="${esc(F.material)}">
+    <datalist id="matList">${[...new Set(S.items.map(i=>i.material).filter(Boolean))].map(m=>`<option value="${esc(m)}">`).join('')}</datalist>
+    <label class="f" for="fin">Finitura / colore</label>
+    <input class="in" id="fin" placeholder="es. laccato bianco opaco" value="${esc(F.finish)}">
+    <label class="f">Condizioni</label>
+    ${chipsHtml(CONDITIONS, F.condition, 'cond')}
+    <label class="f" for="notes">Note</label>
+    <textarea class="in" id="notes" placeholder="Smontabile? Da restaurare? Vincoli di posizionamento…">${esc(F.notes)}</textarea>
+  </div>
+  ${F.isNew ? '' : `<button class="btn dan block" id="delItem" style="margin-bottom:20px">🗑️ Elimina questo mobile</button>`}
+  `;
+  document.querySelectorAll('.savebar').forEach(e => e.remove());
+  const bar = document.createElement('div'); bar.className = 'savebar';
+  bar.innerHTML = `<button class="btn" id="cancel">Annulla</button>
+    ${F.isNew?`<button class="btn" id="saveNext"><span>Salva e</span><span>nuovo 📷</span></button>`:''}
+    <button class="btn pri" id="save">Salva ✓</button>`;
+  document.body.appendChild(bar);
+
+  drawPhotos(); drawExtras(); drawComputed();
+
+  // handlers
+  app.querySelectorAll('[data-dim]').forEach(inp => inp.oninput = () => { F.dims[inp.dataset.dim] = num(inp.value); drawComputed(); saveDraft(); });
+  // tasto "Avanti" della tastiera: L → P → A
+  [['dL','dP'],['dP','dA'],['dA',null]].forEach(([a,b]) => $('#'+a).onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); b ? $('#'+b).focus() : e.target.blur(); } });
+  $('#name').oninput = e => { F.name = e.target.value; saveDraft(); };
+  $('#roomCur').oninput = e => { F.roomCurrent = e.target.value; saveDraft(); };
+  $('#mat').oninput = e => { F.material = e.target.value; saveDraft(); };
+  $('#fin').oninput = e => { F.finish = e.target.value; saveDraft(); };
+  $('#notes').oninput = e => { F.notes = e.target.value; saveDraft(); };
+  const setQty = v => { F.qty = Math.max(1, parseInt(v)||1); $('#qty').value = F.qty; drawComputed(); saveDraft(); };
+  $('#qty').onchange = e => setQty(e.target.value);
+  $('#qMinus').onclick = () => setQty(F.qty-1);
+  $('#qPlus').onclick = () => setQty(F.qty+1);
+  bindChips('cat', v => { setCategory(v); });
+  const bindRooms = () => {
+    const box = $('#roomChips .chips');
+    box.insertAdjacentHTML('beforeend', '<button type="button" class="chip" id="newRoom">＋ Nuova</button>');
+    bindChips('room', v => { F.roomTarget = v; });
+    $('#newRoom').onclick = async () => {
+      const added = await addRoomsDialog(); if (!added.length) return;
+      F.roomTarget = added[0]; saveDraft();
+      $('#roomChips').innerHTML = chipsHtml(S.settings.rooms, F.roomTarget, 'room'); bindRooms();
+    };
+  };
+  bindRooms();
+  bindChips('cond', v => { F.condition = v; });
+  $('#takePh').onclick = () => $('#camInput').click();
+  $('#galPh').onclick = () => $('#galInput').click();
+  $('#sharePh') && ($('#sharePh').onclick = shareAnnotated);
+  $('#addX').onclick = addExtraPicker;
+  $('#cancel').onclick = cancelEdit;
+  $('#save').onclick = () => saveItem(false);
+  $('#saveNext') && ($('#saveNext').onclick = () => saveItem(true));
+  $('#delItem') && ($('#delItem').onclick = deleteItem);
+  window.scrollTo(0,0);
+}
+function bindChips(attr, fn){
+  app.querySelectorAll(`[data-${attr}]`).forEach(b => b.onclick = () => {
+    const v = b.dataset[attr];
+    const on = b.classList.contains('on');
+    app.querySelectorAll(`[data-${attr}]`).forEach(x => x.classList.remove('on'));
+    if (!on) b.classList.add('on');
+    fn(on ? '' : v); saveDraft();
+  });
+}
+function setCategory(cat){
+  const old = CAT_EXTRAS[F.category] || [];
+  // togli le misure suggerite dalla vecchia categoria rimaste vuote
+  F.shownExtras = F.shownExtras.filter(k => !(old.includes(k) && F.extra[k] == null));
+  F.category = cat;
+  (CAT_EXTRAS[cat] || []).forEach(k => { if (!F.shownExtras.includes(k)) F.shownExtras.push(k); });
+  drawExtras();
+}
+function drawComputed(){
+  const a = footprint(F), v = volume(F);
+  $('#computed').innerHTML = (a||v) ? `Ingombro a pavimento: <b>${fmt(a,2)} m²</b>${v?` · Volume: <b>${fmt(v,2)} m³</b>`:''}${F.qty>1?` (per pezzo)`:''}` : 'Inserisci le misure: l’app calcola ingombro e volume.';
+}
+function drawExtras(){
+  const box = $('#extras');
+  const rows = F.shownExtras.filter(k => EXTRA[k]).map(k => { const e = EXTRA[k]; return `
+    <div class="xrow"><span class="lbl">${esc(e.l)}</span>
+      <input class="v" inputmode="decimal" data-x="${k}" value="${F.extra[k]??''}"><span class="u">${e.u}</span>
+      <button class="rm" data-rmx="${k}" aria-label="Rimuovi">✕</button></div>`; }).join('');
+  const cust = F.custom.map((c,i) => `
+    <div class="xrow"><input class="lbl" data-cl="${i}" value="${esc(c.label)}" placeholder="Nome misura">
+      <input class="v" inputmode="decimal" data-cv="${i}" value="${c.value??''}"><span class="u">cm</span>
+      <button class="rm" data-rmc="${i}" aria-label="Rimuovi">✕</button></div>`).join('');
+  box.innerHTML = rows + cust || `<p class="hint">Scegli una categoria per vedere le misure tipiche, oppure aggiungine una.</p>`;
+  box.querySelectorAll('[data-x]').forEach(i => i.oninput = () => { const v = num(i.value); if (v==null) delete F.extra[i.dataset.x]; else F.extra[i.dataset.x] = v; if (i.dataset.x==='diametro') drawComputed(); saveDraft(); });
+  box.querySelectorAll('[data-rmx]').forEach(b => b.onclick = () => { const k=b.dataset.rmx; F.shownExtras = F.shownExtras.filter(x=>x!==k); delete F.extra[k]; drawExtras(); drawComputed(); saveDraft(); });
+  box.querySelectorAll('[data-cl]').forEach(i => i.oninput = () => { F.custom[+i.dataset.cl].label = i.value; saveDraft(); });
+  box.querySelectorAll('[data-cv]').forEach(i => i.oninput = () => { F.custom[+i.dataset.cv].value = num(i.value); saveDraft(); });
+  box.querySelectorAll('[data-rmc]').forEach(b => b.onclick = () => { F.custom.splice(+b.dataset.rmc,1); drawExtras(); saveDraft(); });
+}
+async function addExtraPicker(){
+  const avail = EXTRAS.filter(e => !F.shownExtras.includes(e.k));
+  const v = await modal({title:'Aggiungi misura',
+    html:`<div class="list"><button data-pick="__custom"><b>✏️ Misura personalizzata…</b></button>${avail.map(e=>`<button data-pick="${e.k}">${esc(e.l)} <span class="unit">(${e.u})</span></button>`).join('')}</div>`,
+    buttons:[{label:'Chiudi', value:null}],
+    onMount:(md, close) => md.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => close(b.dataset.pick))});
+  if (!v) return;
+  if (v === '__custom') {
+    const label = await promptBox('Nome della misura', 'es. Altezza maniglia');
+    if (!label) return;
+    F.custom.push({label, value:null});
+  } else F.shownExtras.push(v);
+  drawExtras(); saveDraft();
+  const inputs = $('#extras').querySelectorAll('input.v'); inputs[v==='__custom'?inputs.length-1:F.shownExtras.filter(k=>EXTRA[k]).indexOf(v)]?.focus();
+}
+async function drawPhotos(){
+  const box = $('#photos'); if (!box) return;
+  if (!F.photoIds.length) { box.innerHTML = `<p class="hint" style="margin:0">Nessuna foto. Puoi scattarne più di una (fronte, interno, dettagli).</p>`; return; }
+  box.innerHTML = F.photoIds.map(id => `<button class="ph" data-view="${id}"><span class="x" data-delph="${id}">✕</span></button>`).join('');
+  box.querySelectorAll('[data-view]').forEach(async el => { const u = await thumbUrl(el.dataset.view); if (u) el.style.backgroundImage = `url(${u})`; });
+  box.querySelectorAll('[data-view]').forEach(el => el.onclick = async e => {
+    const del = e.target.closest('[data-delph]');
+    if (del) { e.stopPropagation(); return removePhoto(del.dataset.delph); }
+    viewPhoto(el.dataset.view);
+  });
+}
+// Crea le foto con la fascia delle misure e le passa al menu "Condividi" del telefono
+// (da lì: "Salva immagine" / Galleria, Drive, WhatsApp…) oppure le scarica.
+async function shareAnnotated(){
+  if (!F.photoIds.length) return toast('Nessuna foto in questa scheda');
+  if (isDirty()) return toast('Salva prima le modifiche');
+  const b = busy('Preparo le foto…');
+  const files = [];
+  try {
+    for (let i = 0; i < F.photoIds.length; i++) {
+      const p = await idb.get('photos', F.photoIds[i]); if (!p) continue;
+      const blob = await annotatePhoto(p.blob, captionLines(F));
+      files.push(new File([blob], `${F.code}_${slug(displayName(F))}_${i+1}.jpg`, {type:'image/jpeg'}));
+    }
+  } finally { b.done(); }
+  const canShare = navigator.canShare?.({files});
+  const v = await modal({title:'Foto con misure pronte', text:`${files.length} foto`, html:`<img src="${URL.createObjectURL(files[0])}" style="width:100%;border-radius:10px" alt="">`,
+    buttons:[...(canShare?[{label:'📤 Salva in galleria / condividi', value:'share', cls:'pri'}]:[]), {label:'⬇️ Scarica', value:'dl', cls:canShare?'':'pri'}, {label:'Chiudi', value:null}]});
+  if (v === 'share') { try { await navigator.share({files}); } catch (e) { if (e.name !== 'AbortError') files.forEach(f => downloadBlob(f, f.name)); } }
+  else if (v === 'dl') files.forEach(f => downloadBlob(f, f.name));
+}
+async function removePhoto(id){
+  if (!await confirmBox('Eliminare la foto?', '', 'Elimina', true)) return;
+  F.photoIds = F.photoIds.filter(x => x !== id);
+  if (F._added.includes(id)) { F._added = F._added.filter(x=>x!==id); await idb.del('photos', id); forgetThumb(id); }
+  else F._removed.push(id);
+  saveDraft(); drawPhotos();
+}
+async function viewPhoto(id){
+  const p = await idb.get('photos', id); if (!p) return;
+  const u = URL.createObjectURL(p.blob);
+  const v = document.createElement('div'); v.className = 'viewer';
+  v.innerHTML = `<img src="${u}" alt=""><button>Chiudi ✕</button>`;
+  v.onclick = () => { v.remove(); URL.revokeObjectURL(u); };
+  document.body.appendChild(v);
+}
+async function onPhotos(files){
+  if (!files?.length) return;
+  if (S.saving) await S.saving;  // "Salva e nuovo": aspetta che la scheda precedente sia salvata
+  if (!F) { // foto scattata ma la scheda non esiste più: creane una
+    F = (await idb.get('kv','draft')) || newItem();
+  }
+  // segnaposto immediato mentre la foto viene elaborata
+  const box = $('#photos');
+  if (box) { box.querySelector('.hint')?.remove(); files.forEach(() => box.insertAdjacentHTML('beforeend', '<div class="ph loading"></div>')); }
+  for (const f of files) {
+    try { const id = await storePhoto(f, F.id); F.photoIds.push(id); F._added.push(id); }
+    catch (e) { console.error(e); toast('Impossibile leggere una foto'); }
+  }
+  await idb.put('kv', F, 'draft');
+  if (!location.hash.startsWith('#/scheda')) go('#/scheda'); else drawPhotos();
+  // dopo la foto, porta il cursore alla prima misura
+  if (F.dims.larghezza == null) setTimeout(() => $('#dL')?.focus(), 150);
+}
+$('#camInput').onchange = e => { const f = [...e.target.files]; e.target.value = ''; onPhotos(f); };
+$('#galInput').onchange = e => { const f = [...e.target.files]; e.target.value = ''; onPhotos(f); };
+
+function isDirty(){
+  if (!F) return false;
+  if (F.isNew) return F.photoIds.length || F.name || F.category || Object.values(F.dims).some(v=>v!=null) || F.notes;
+  const {_added, _removed, isNew, ...rest} = F;
+  const o = JSON.parse(F_orig||'{}');
+  return _added.length || _removed.length || ['name','category','roomTarget','roomCurrent','qty','material','finish','condition','notes'].some(k => (rest[k]??'') !== (o[k]??'')) ||
+    JSON.stringify(rest.dims) !== JSON.stringify(o.dims) || JSON.stringify(rest.extra) !== JSON.stringify(o.extra) || JSON.stringify(rest.custom) !== JSON.stringify(o.custom);
+}
+async function discardEdit(){
+  for (const id of F._added) { await idb.del('photos', id); forgetThumb(id); }
+  F = null; F_orig = null; await clearDraft();
+}
+async function cancelEdit(){
+  if (isDirty() && !await confirmBox('Uscire senza salvare?', 'Le modifiche a questa scheda andranno perse.', 'Esci senza salvare', true)) return;
+  await discardEdit(); go('#/');
+}
+// tasto "indietro" del telefono mentre si è nell'editor
+async function leaveEditorCheck(){
+  if (!isDirty()) { await discardEdit(); return true; }
+  const r = await modal({title:'Scheda non salvata', text:'Vuoi salvare questo mobile prima di uscire?',
+    buttons:[{label:'Salva', value:'save', cls:'pri'},{label:'Esci senza salvare', value:'discard', cls:'dan'},{label:'Resta nella scheda', value:'stay'}]});
+  if (r === 'save') { await commit(); return true; }
+  if (r === 'discard') { await discardEdit(); return true; }
+  history.replaceState(null, '', '#/scheda'); renderEditor(); return false;
+}
+async function commit(){
+  const it = F;
+  for (const id of it._removed) { await idb.del('photos', id); forgetThumb(id); }
+  if (it.isNew) it.code = nextCode();
+  // tieni solo le misure extra compilate o mostrate
+  it.custom = it.custom.filter(c => c.label?.trim() || c.value != null);
+  const {_added, _removed, isNew, ...clean} = it;
+  clean.updatedAt = Date.now();
+  await idb.put('items', clean);
+  const i = S.items.findIndex(x => x.id === clean.id);
+  if (i >= 0) S.items[i] = clean; else S.items.push(clean);
+  if (clean.roomTarget) S.lastRoom = clean.roomTarget;
+  F = null; F_orig = null; await clearDraft();
+  navigator.storage?.persist?.();
+  return clean;
+}
+async function saveItem(andNext){
+  if (!F.photoIds.length && !F.name && !F.category && !Object.values(F.dims).some(v=>v!=null)) { toast('Scheda vuota: aggiungi almeno una foto o una misura'); return; }
+  haptic();
+  if (andNext) {
+    // la fotocamera va aperta subito, nello stesso tocco (requisito del browser);
+    // la foto in arrivo aspetta la fine del salvataggio (vedi onPhotos)
+    $('#camInput').click();
+    const next = newItem(); next.roomTarget = F.roomTarget;
+    S.saving = commit(); const saved = await S.saving; S.saving = null;
+    F = next; await idb.put('kv', F, 'draft');
+    toast(`Salvato ${saved.code} ✔ — ora il prossimo`); renderEditor(); return;
+  }
+  const saved = await commit();
+  toast(`Salvato ${saved.code} ✔`);
+  go('#/');
+}
+function haptic(ms = 12){ try { navigator.vibrate?.(ms); } catch {} }
+async function deleteItem(){
+  if (!await confirmBox(`Eliminare ${F.code}?`, 'Il mobile e le sue foto verranno cancellati definitivamente.', 'Elimina', true)) return;
+  const photos = await idb.photosOf(F.id);
+  for (const p of photos) { await idb.del('photos', p.id); forgetThumb(p.id); }
+  await idb.del('items', F.id);
+  S.items = S.items.filter(x => x.id !== F.id);
+  F = null; F_orig = null; await clearDraft();
+  toast('Eliminato'); go('#/');
+}
+
+/* =========================================================
+   AGGIUNTA STANZE (anche più stanze uguali: "Camera" × 8 → Camera 1…8)
+   ========================================================= */
+function numberedRooms(base, qty){
+  const rooms = S.settings.rooms;
+  const re = new RegExp('^' + base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ' (\\d+)$', 'i');
+  const max = rooms.reduce((m, r) => { const x = r.match(re); return x ? Math.max(m, +x[1]) : m; }, 0);
+  // una sola stanza: nome semplice, a meno che esistano già "Camera 1, 2…" → continua la numerazione
+  if (qty <= 1 && !max) return rooms.includes(base) ? [] : [base];
+  return Array.from({length: qty}, (_, i) => `${base} ${max + i + 1}`);
+}
+async function addRoomsDialog(){
+  let name, qtyEl;
+  const ok = await modal({title:'Nuova stanza',
+    html:`<input class="in" id="rName" placeholder="es. Camera, Bagno, Ufficio" autocomplete="off">
+      <label class="f">Quante stanze di questo tipo?</label>
+      <div style="display:flex;align-items:center;gap:12px"><div class="stepper"><button type="button" id="rMinus">−</button><input id="rQty" inputmode="numeric" value="1"><button type="button" id="rPlus">+</button></div>
+      <span class="hint" id="rPrev" style="margin:0"></span></div>`,
+    buttons:[{label:'Aggiungi', value:true, cls:'pri'},{label:'Annulla', value:false}],
+    onMount: md => {
+      name = md.querySelector('#rName'); qtyEl = md.querySelector('#rQty');
+      const prev = () => { const q = Math.max(1, Math.min(50, parseInt(qtyEl.value)||1)); const b = name.value.trim();
+        const list = b ? numberedRooms(b, q) : [];
+        md.querySelector('#rPrev').textContent = q > 1 && list.length ? `→ ${list[0]} … ${list[list.length-1]}` : ''; };
+      md.querySelector('#rMinus').onclick = () => { qtyEl.value = Math.max(1, (parseInt(qtyEl.value)||1) - 1); prev(); };
+      md.querySelector('#rPlus').onclick = () => { qtyEl.value = Math.min(50, (parseInt(qtyEl.value)||1) + 1); prev(); };
+      name.oninput = qtyEl.oninput = prev;
+      setTimeout(() => name.focus(), 50);
+    }});
+  if (!ok) return [];
+  const base = name.value.trim(); if (!base) return [];
+  const added = numberedRooms(base, Math.max(1, Math.min(50, parseInt(qtyEl.value)||1)));
+  if (!added.length) { toast(`“${base}” esiste già`); return []; }
+  // inserisci prima di "Da decidere" se presente
+  const i = S.settings.rooms.indexOf('Da decidere');
+  S.settings.rooms.splice(i < 0 ? S.settings.rooms.length : i, 0, ...added);
+  await saveSettings();
+  toast(added.length > 1 ? `Aggiunte ${added.length} stanze` : `Aggiunta “${added[0]}”`);
+  return added;
+}
+
+/* =========================================================
+   ESPORTAZIONE / IMPOSTAZIONI
+   ========================================================= */
+async function renderExport(){
+  setChrome({title:'Esporta e impostazioni', tab:'navExport'});
+  const n = S.items.length, pcs = S.items.reduce((s,i)=>s+(i.qty||1),0);
+  let storage = '';
+  try { const e = await navigator.storage.estimate(); storage = `${fmt(e.usage/1048576,1)} MB usati`; } catch {}
+  app.innerHTML = `
+  <div class="sec">
+    <h2>Esporta per il computer</h2>
+    <p style="margin:0 0 12px">${n} schede · ${pcs} pezzi ${storage?`· ${storage}`:''}</p>
+    <button class="btn pri block" id="expZip">📦 Esporta tutto (Excel + foto + catalogo)</button>
+    <p class="hint">File .zip con: <b>inventario.xlsx</b> (tabella con tutte le misure, riepilogo per stanza e categoria), cartella <b>foto</b>, cartella <b>foto_con_misure</b> (con codice, misure e stanza scritti sotto ogni foto) e <b>catalogo.html</b> da aprire nel browser per sfogliare i mobili con le foto. Lo stesso file serve anche come backup.</p>
+    <button class="btn block" id="expXlsx" style="margin-top:12px">📊 Solo Excel (senza foto)</button>
+    <button class="btn block" id="expCsv" style="margin-top:8px">📄 Solo CSV</button>
+  </div>
+  <div class="sec">
+    <h2>Progetto</h2>
+    <label class="f" for="proj">Nome progetto / cliente (compare nei file esportati)</label>
+    <input class="in" id="proj" placeholder="es. Casa Rossi – via Roma" value="${esc(S.settings.project)}">
+  </div>
+  <div class="sec">
+    <h2>Stanze</h2>
+    <div class="listedit" id="roomsEd"></div>
+    <button class="btn block" id="addRoom" style="margin-top:10px">＋ Aggiungi stanze</button>
+    <p class="hint">Puoi aggiungerne più di una uguale: es. “Camera” × 8 crea Camera 1 … Camera 8.</p>
+  </div>
+  <div class="sec">
+    <h2>Categorie</h2>
+    <div class="listedit" id="catsEd"></div>
+    <button class="btn block" id="addCat" style="margin-top:10px">＋ Aggiungi categoria</button>
+  </div>
+  <div class="sec">
+    <h2>Backup</h2>
+    <button class="btn block" id="restore">♻️ Ripristina da un file .zip esportato</button>
+    <p class="hint">I dati sono salvati solo su questo telefono. Esporta spesso: se cancelli i dati del browser li perdi. Su iPhone aggiungi l’app alla schermata Home (Condividi → Aggiungi a Home) per evitare che Safari la svuoti.</p>
+    <button class="btn dan block" id="wipe" style="margin-top:12px">Cancella tutti i dati</button>
+  </div>`;
+  $('#proj').onchange = e => { S.settings.project = e.target.value.trim(); saveSettings(); };
+  drawListEd('roomsEd', S.settings.rooms); drawListEd('catsEd', S.settings.categories);
+  $('#addRoom').onclick = async () => { if ((await addRoomsDialog()).length) drawListEd('roomsEd', S.settings.rooms); };
+  $('#addCat').onclick = async () => { const v = await promptBox('Nuova categoria','es. Pianoforte'); if (v && !S.settings.categories.includes(v)) { S.settings.categories.push(v); saveSettings(); drawListEd('catsEd', S.settings.categories); } };
+  $('#expZip').onclick = () => doExport('zip');
+  $('#expXlsx').onclick = () => doExport('xlsx');
+  $('#expCsv').onclick = () => doExport('csv');
+  $('#restore').onclick = () => $('#restoreInput').click();
+  $('#wipe').onclick = wipeAll;
+}
+function drawListEd(id, arr){
+  const box = $('#'+id);
+  box.innerHTML = arr.map((v,i) => `<div class="row"><span>${esc(v)}</span>
+    <button data-up="${i}" aria-label="Su">↑</button><button data-ren="${i}" aria-label="Rinomina">✎</button><button data-del="${i}" aria-label="Elimina">✕</button></div>`).join('');
+  const field = id === 'roomsEd' ? 'roomTarget' : 'category';
+  box.querySelectorAll('[data-up]').forEach(b => b.onclick = () => { const i=+b.dataset.up; if (i>0) { [arr[i-1],arr[i]]=[arr[i],arr[i-1]]; saveSettings(); drawListEd(id, arr); } });
+  box.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { const i=+b.dataset.del; if (await confirmBox(`Rimuovere “${arr[i]}” dall’elenco?`, 'I mobili già assegnati mantengono il valore.', 'Rimuovi', true)) { arr.splice(i,1); saveSettings(); drawListEd(id, arr); } });
+  box.querySelectorAll('[data-ren]').forEach(b => b.onclick = async () => {
+    const i=+b.dataset.ren, old=arr[i]; const v = await promptBox('Rinomina', '', old); if (!v || v===old) return;
+    arr[i] = v; saveSettings();
+    for (const it of S.items.filter(x => x[field] === old)) { it[field] = v; await idb.put('items', it); }
+    drawListEd(id, arr);
+  });
+}
+async function wipeAll(){
+  if (!await confirmBox('Cancellare TUTTO?', 'Tutti i mobili e le foto verranno eliminati da questo telefono. Hai esportato un backup?', 'Sì, cancella tutto', true)) return;
+  await idb.clear('items'); await idb.clear('photos'); await clearDraft();
+  thumbUrls.forEach(u => URL.revokeObjectURL(u)); thumbUrls.clear();
+  S.items = []; toast('Dati cancellati'); go('#/');
+}
+
+// --- costruzione tabella ---
+function sortedItems(){ return [...S.items].sort((a,b)=>cmp(a.code, b.code)); }
+function buildTable(photoNames){
+  const items = sortedItems();
+  const usedX = EXTRAS.filter(e => items.some(it => it.extra?.[e.k] != null));
+  const head = ['Codice','Nome','Categoria','Stanza destinazione','Provenienza','Quantità','Larghezza (cm)','Profondità (cm)','Altezza (cm)',
+    ...usedX.map(e => `${e.l} (${e.u})`), 'Altre misure', 'Ingombro pavimento (m²)', 'Volume (m³)', 'Materiale', 'Finitura / colore', 'Condizioni', 'Note', 'N. foto', 'Foto', 'Data inserimento'];
+  const rows = items.map(it => {
+    const a = footprint(it), v = volume(it);
+    return [it.code, displayName(it), it.category||'', it.roomTarget||'', it.roomCurrent||'', it.qty||1,
+      it.dims.larghezza, it.dims.profondita, it.dims.altezza,
+      ...usedX.map(e => it.extra?.[e.k] ?? null),
+      (it.custom||[]).filter(c=>c.label||c.value!=null).map(c => `${c.label}: ${c.value??'–'} cm`).join('; '),
+      a==null?null:+a.toFixed(3), v==null?null:+v.toFixed(3),
+      it.material||'', it.finish||'', it.condition||'', it.notes||'',
+      it.photoIds.length, (photoNames?.[it.id]||[]).join(', '), new Date(it.createdAt).toLocaleDateString('it-IT')];
+  });
+  return {head, rows, items, photoCol: head.indexOf('Foto')};
+}
+function summary(field, label){
+  const m = new Map();
+  S.items.forEach(it => { const k = it[field] || (field==='roomTarget'?'Da assegnare':'Senza categoria');
+    const r = m.get(k) || {n:0, pcs:0, a:0, v:0, codes:[]};
+    r.n++; r.pcs += it.qty||1; r.a += (footprint(it)||0)*(it.qty||1); r.v += (volume(it)||0)*(it.qty||1); r.codes.push(it.code); m.set(k, r); });
+  const order = field==='roomTarget' ? S.settings.rooms : S.settings.categories;
+  const keys = [...m.keys()].sort((a,b)=>{const ia=order.indexOf(a), ib=order.indexOf(b); return (ia<0?999:ia)-(ib<0?999:ib);});
+  return [[label,'Schede','Pezzi','Ingombro pavimento (m²)','Volume (m³)','Codici'],
+    ...keys.map(k => { const r = m.get(k); return [k, r.n, r.pcs, +r.a.toFixed(2), +r.v.toFixed(2), r.codes.sort(cmp).join(', ')]; })];
+}
+function buildWorkbook(photoNames){
+  const {head, rows, items, photoCol} = buildTable(photoNames);
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([head, ...rows]);
+  ws['!cols'] = head.map((h,i) => ({wch: i===1||h==='Note'||h==='Altre misure' ? 30 : h==='Foto' ? 28 : Math.max(10, Math.min(22, h.length+2))}));
+  ws['!autofilter'] = {ref: XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:rows.length, c:head.length-1}})};
+  // collegamento alla prima foto (funziona dopo aver estratto lo zip)
+  if (photoNames) rows.forEach((r, i) => {
+    const first = (photoNames[items[i].id]||[])[0];
+    if (first) { const ref = XLSX.utils.encode_cell({r:i+1, c:photoCol}); ws[ref].l = {Target:`foto/${first}`, Tooltip:'Apri foto'}; }
+  });
+  XLSX.utils.book_append_sheet(wb, ws, 'Mobili');
+  const s1 = XLSX.utils.aoa_to_sheet(summary('roomTarget','Stanza')); s1['!cols'] = [{wch:24},{wch:8},{wch:8},{wch:22},{wch:12},{wch:50}];
+  XLSX.utils.book_append_sheet(wb, s1, 'Per stanza');
+  const s2 = XLSX.utils.aoa_to_sheet(summary('category','Categoria')); s2['!cols'] = [{wch:24},{wch:8},{wch:8},{wch:22},{wch:12},{wch:50}];
+  XLSX.utils.book_append_sheet(wb, s2, 'Per categoria');
+  wb.Props = {Title:`Inventario mobili ${S.settings.project||''}`.trim(), CreatedDate:new Date()};
+  return XLSX.write(wb, {type:'array', bookType:'xlsx'});
+}
+function catalogHtml(photoNames){
+  const items = sortedItems();
+  const by = new Map(); items.forEach(it => { const k = it.roomTarget||'Da assegnare'; if (!by.has(k)) by.set(k, []); by.get(k).push(it); });
+  const keys = [...by.keys()].sort((a,b)=>{const o=S.settings.rooms; const ia=o.indexOf(a), ib=o.indexOf(b); return (ia<0?999:ia)-(ib<0?999:ib);});
+  const card = it => {
+    const ph = photoNames[it.id]||[];
+    const ms = [['Larghezza',it.dims.larghezza,'cm'],['Profondità',it.dims.profondita,'cm'],['Altezza',it.dims.altezza,'cm'],
+      ...Object.entries(it.extra||{}).filter(([k])=>EXTRA[k]).map(([k,v])=>[EXTRA[k].l,v,EXTRA[k].u]),
+      ...(it.custom||[]).map(c=>[c.label,c.value,'cm'])].filter(m=>m[1]!=null);
+    const a = footprint(it), v = volume(it);
+    return `<article><div class="ph">${ph.map(p=>`<a href="foto/${p}" target="_blank"><img src="foto/${p}" loading="lazy" alt=""></a>`).join('')||'<div class="nop">nessuna foto</div>'}</div>
+      <div class="bd"><h3><span>${esc(it.code)}</span> ${esc(displayName(it))}${it.qty>1?` ×${it.qty}`:''}</h3>
+      <p class="cat">${esc([it.category, it.roomCurrent?`da: ${it.roomCurrent}`:''].filter(Boolean).join(' · '))}</p>
+      <table>${ms.map(m=>`<tr><td>${esc(m[0])}</td><td>${fmt(m[1])} ${m[2]}</td></tr>`).join('')}
+      ${a?`<tr><td>Ingombro</td><td>${fmt(a,2)} m²</td></tr>`:''}${v?`<tr><td>Volume</td><td>${fmt(v,2)} m³</td></tr>`:''}</table>
+      ${[it.material,it.finish,it.condition].some(Boolean)?`<p>${esc([it.material,it.finish,it.condition].filter(Boolean).join(' · '))}</p>`:''}
+      ${it.notes?`<p class="nt">${esc(it.notes)}</p>`:''}</div></article>`;
+  };
+  return `<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Catalogo mobili ${esc(S.settings.project)}</title><style>
+body{font:15px/1.4 -apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#f6f3ee;color:#1f2622}
+header{background:#2e4a3e;color:#fff;padding:20px 28px}h1{margin:0;font-size:24px}header p{margin:4px 0 0;opacity:.8}
+main{padding:10px 28px 40px}h2{margin:28px 0 10px;border-bottom:2px solid #2e4a3e;padding-bottom:4px}h2 small{font-weight:400;color:#6b736e;font-size:14px}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+article{background:#fff;border:1px solid #ddd6cb;border-radius:12px;overflow:hidden;break-inside:avoid}
+.ph{display:flex;gap:2px;overflow-x:auto;background:#efeae2}.ph img{height:200px;display:block}.nop{height:120px;display:grid;place-items:center;width:100%;color:#999}
+.bd{padding:10px 14px}h3{margin:0 0 2px;font-size:17px}h3 span{color:#c9774a}.cat{color:#6b736e;margin:0 0 8px}
+table{border-collapse:collapse;width:100%}td{padding:3px 0;border-bottom:1px solid #eee}td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.nt{background:#f6f3ee;padding:6px 8px;border-radius:6px}@media print{.ph img{height:140px}}
+</style></head><body><header><h1>Catalogo mobili${S.settings.project?` – ${esc(S.settings.project)}`:''}</h1><p>${items.length} schede · esportato il ${new Date().toLocaleDateString('it-IT')}</p></header><main>
+${keys.map(k=>{const g=by.get(k); const a=g.reduce((s,i)=>s+(footprint(i)||0)*(i.qty||1),0); return `<h2>${esc(k)} <small>${g.reduce((s,i)=>s+(i.qty||1),0)} pz${a?` · ${fmt(a,2)} m²`:''}</small></h2><div class="g">${g.map(card).join('')}</div>`;}).join('')}
+</main></body></html>`;
+}
+function baseName(){ return `Inventario_${slug(S.settings.project)||'mobili'}_${today()}`; }
+
+async function doExport(kind){
+  if (!S.items.length) return toast('Nessun mobile da esportare');
+  const b = busy('Preparo il file…');
+  try {
+    let blob, name;
+    if (kind === 'csv') {
+      const {head, rows} = buildTable(null);
+      const cell = v => v==null ? '' : typeof v === 'number' ? String(v).replace('.', ',') : `"${String(v).replace(/"/g,'""')}"`;
+      blob = new Blob(['﻿' + [head, ...rows].map(r => r.map(cell).join(';')).join('\r\n')], {type:'text/csv'});
+      name = baseName() + '.csv';
+    } else if (kind === 'xlsx') {
+      blob = new Blob([buildWorkbook(null)], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      name = baseName() + '.xlsx';
+    } else {
+      const zip = new JSZip(); const folder = zip.folder('foto'); const folderM = zip.folder('foto_con_misure'); const photoNames = {};
+      const items = sortedItems(); let n = 0;
+      for (const it of items) {
+        photoNames[it.id] = [];
+        for (let i = 0; i < it.photoIds.length; i++) {
+          const p = await idb.get('photos', it.photoIds[i]); if (!p) continue;
+          const fn = `${it.code}_${slug(displayName(it))}_${i+1}.jpg`;
+          folder.file(fn, p.blob); photoNames[it.id].push(fn);
+          folderM.file(fn, await annotatePhoto(p.blob, captionLines(it)));
+        }
+        b.set(`Preparo il file… ${++n}/${items.length}`);
+      }
+      zip.file('inventario.xlsx', buildWorkbook(photoNames));
+      zip.file('catalogo.html', catalogHtml(photoNames));
+      zip.file('backup/dati.json', JSON.stringify({app:'inventario-mobili', version:1, exportedAt:new Date().toISOString(), settings:S.settings, items, photoNames}, null, 1));
+      blob = await zip.generateAsync({type:'blob', compression:'STORE'}, m => b.set(`Comprimo… ${Math.round(m.percent)}%`));
+      name = baseName() + '.zip';
+    }
+    b.done();
+    deliver(blob, name);
+  } catch (e) { b.done(); console.error(e); modal({title:'Errore durante l’esportazione', text:String(e?.message||e)}); }
+}
+async function deliver(blob, name){
+  const file = new File([blob], name, {type: blob.type || 'application/octet-stream'});
+  const canShare = navigator.canShare?.({files:[file]});
+  const size = blob.size > 1048576 ? `${fmt(blob.size/1048576,1)} MB` : `${fmt(blob.size/1024,0)} KB`;
+  const v = await modal({title:'File pronto', text:`${name} (${size})`,
+    buttons:[...(canShare?[{label:'📤 Condividi (Drive, email, WhatsApp…)', value:'share', cls:'pri'}]:[]),
+      {label:'⬇️ Scarica sul dispositivo', value:'dl', cls:canShare?'':'pri'}, {label:'Chiudi', value:null}]});
+  if (v === 'share') {
+    try { await navigator.share({files:[file], title:name}); } catch (e) { if (e.name !== 'AbortError') downloadBlob(blob, name); }
+  } else if (v === 'dl') downloadBlob(blob, name);
+}
+function downloadBlob(blob, name){
+  const u = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(u), 60000);
+}
+
+// --- ripristino da zip ---
+$('#restoreInput').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  const b = busy('Leggo il backup…');
+  try {
+    const zip = await JSZip.loadAsync(f);
+    const j = zip.file('backup/dati.json'); if (!j) throw new Error('Questo zip non contiene un backup dell’app (manca backup/dati.json).');
+    const data = JSON.parse(await j.async('string'));
+    b.done();
+    const existing = new Set(S.items.map(i => i.id));
+    const dup = data.items.filter(i => existing.has(i.id)).length;
+    const ok = await confirmBox('Ripristinare il backup?', `${data.items.length} schede nel file${dup?`, ${dup} già presenti verranno sovrascritte`:''}.`, 'Ripristina');
+    if (!ok) return;
+    const b2 = busy('Ripristino…'); let n = 0;
+    for (const it of data.items) {
+      // elimina foto vecchie della stessa scheda
+      for (const p of await idb.photosOf(it.id)) { await idb.del('photos', p.id); forgetThumb(p.id); }
+      const ids = [];
+      for (const fn of (data.photoNames?.[it.id] || [])) {
+        const zf = zip.file('foto/' + fn); if (!zf) continue;
+        const blob = new Blob([await zf.async('arraybuffer')], {type:'image/jpeg'});
+        const [thumb] = await processImage(blob, [[320, 0.75]]);
+        const id = uid(); await idb.put('photos', {id, itemId:it.id, blob, thumb, createdAt:Date.now()}); ids.push(id);
+      }
+      it.photoIds = ids; await idb.put('items', it);
+      b2.set(`Ripristino… ${++n}/${data.items.length}`);
+    }
+    if (data.settings) {
+      S.settings.rooms = [...new Set([...S.settings.rooms, ...(data.settings.rooms||[])])];
+      S.settings.categories = [...new Set([...S.settings.categories, ...(data.settings.categories||[])])];
+      if (!S.settings.project) S.settings.project = data.settings.project || '';
+      await saveSettings();
+    }
+    S.items = await idb.all('items');
+    b2.done(); toast('Backup ripristinato ✔'); go('#/');
+  } catch (err) { document.querySelectorAll('.busy').forEach(x=>x.remove()); modal({title:'Ripristino non riuscito', text:String(err?.message||err)}); }
+};
+
+/* =========================================================
+   AVVIO
+   ========================================================= */
+(async function init(){
+  try { await loadAll(); }
+  catch (e) { app.innerHTML = `<div class="empty">Impossibile accedere alla memoria del browser.<br>${esc(e.message)}</div>`; return; }
+  const draft = await idb.get('kv', 'draft');
+  if (draft) {
+    F = draft;
+    if (!F.isNew) { const o = S.items.find(i => i.id === F.id); F_orig = o ? JSON.stringify(o) : null; }
+    if (!location.hash.startsWith('#/scheda')) { history.replaceState(null, '', '#/scheda'); }
+    toast('Ho ripreso la scheda che stavi compilando');
+  }
+  render();
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
