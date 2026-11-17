@@ -1,5 +1,6 @@
 // Service worker: rende l'app utilizzabile anche senza connessione.
-const CACHE = 'inventario-mobili-v6';
+// Quando si pubblica un aggiornamento: aumentare il numero qui E APP_VERSION in index.html.
+const CACHE = 'inventario-mobili-v7';
 const FILES = [
   './',
   './index.html',
@@ -14,7 +15,8 @@ const FILES = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  // cache:'reload' = scarica sempre i file freschi dal server (non copie vecchie in memoria)
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, {cache:'reload'})))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
